@@ -1,0 +1,24 @@
+/* The woff2 files are served from public/assets/xds/fonts in the consuming app. */
+@font-face {
+  font-family: 'VoltaModernDisplay';
+  src: url('/assets/xds/fonts/VoltaModernDisplay-55Roman.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'VoltaModernDisplay';
+  src: url('/assets/xds/fonts/VoltaModernDisplay-65Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'VoltaModernDisplay';
+  src: url('/assets/xds/fonts/VoltaModernDisplay-75Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
