@@ -955,15 +955,13 @@ const navItems = componentGroups.flatMap((group) => group.items)
 const chatbotDescription =
   "A working chat demo that combines General and Conversational AI components. Send any prompt to see the assistant think and answer with sources, with approval available in Settings."
 
-const initialComponent = componentItems.find((item) => item.id === "card")
-  ?.id ?? componentItems[0]?.id ?? ""
-
 export function App() {
-  const [activeComponentId, setActiveComponentId] = useState(initialComponent)
+  const [activeComponentId, setActiveComponentId] = useState<string | null>(null)
   const [suggestionsPlacement, setSuggestionsPlacement] =
     useState<SuggestionsPlacement>("below")
   const [showSuggestionsLabel, setShowSuggestionsLabel] = useState(true)
   const activeComponent = navItems.find((item) => item.id === activeComponentId)
+  const isIntroduction = activeComponentId === null
   const isChatbot = activeComponentId === "chatbot"
   const example = activeComponent?.example
   const exampleCode =
@@ -980,8 +978,24 @@ export function App() {
             aria-label="xDS components"
             className="flex flex-col gap-2"
           >
+            <button
+              type="button"
+              aria-current={isIntroduction ? "page" : undefined}
+              className={`min-h-10 w-full border-l-2 px-3 text-left text-base transition-colors ${
+                isIntroduction
+                  ? "border-primary bg-muted font-medium text-foreground"
+                  : "border-transparent text-foreground hover:bg-muted"
+              }`}
+              onClick={() => setActiveComponentId(null)}
+            >
+              Overview
+            </button>
             {componentGroups.map((group) => (
-              <details key={group.name} open className="group/nav">
+              <details
+                key={group.name}
+                open={group.name !== "General"}
+                className="group/nav"
+              >
                 <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 text-base font-medium text-foreground marker:hidden hover:bg-muted">
                   <ChevronRight
                     aria-hidden="true"
@@ -1017,18 +1031,73 @@ export function App() {
       </aside>
 
       <main className="min-w-0 px-6 py-10 md:px-[clamp(3rem,6.75vw,9.375rem)] md:py-12">
-        <header>
-          <h1 className="text-5xl leading-none font-bold">
-            {activeComponent?.name ?? "Components"}
-          </h1>
-          <p className="mt-5 max-w-4xl text-2xl leading-snug text-muted-foreground">
-            {isChatbot
-              ? chatbotDescription
-              : example?.description ?? "Preview the selected xDS component."}
-          </p>
-        </header>
+        {isIntroduction ? (
+          <>
+            <header>
+              <h1 className="text-5xl leading-none font-bold">
+                Conversational AI Components
+              </h1>
+              <p className="mt-5 max-w-4xl text-lg leading-relaxed text-muted-foreground">
+                Composable patterns for AI conversations, from the first prompt
+                to grounded answers and human-approved actions.
+              </p>
+            </header>
+            <section aria-label="Explore the library" className="mt-12 max-w-5xl">
+              <h2 className="mb-4 text-sm font-bold text-muted-foreground">
+                Explore the library
+              </h2>
+              <div className="grid border-t border-border sm:grid-cols-2">
+                {[
+                  {
+                    id: "initial-cta",
+                    title: "Start a conversation",
+                    description: "Prompt composer, modes, and attachments.",
+                  },
+                  {
+                    id: "action-plan",
+                    title: "Guide the interaction",
+                    description: "Reviewable plans and approval steps.",
+                  },
+                  {
+                    id: "citations",
+                    title: "Ground responses",
+                    description: "Sources and inline references for answers.",
+                  },
+                  {
+                    id: "chatbot",
+                    title: "See it in context",
+                    description: "A working example combining the library.",
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="border-b border-border py-5 text-left hover:bg-muted sm:px-4"
+                    onClick={() => setActiveComponentId(item.id)}
+                  >
+                    <span className="block text-lg font-medium">{item.title}</span>
+                    <span className="mt-1 block text-sm text-muted-foreground">
+                      {item.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            <header>
+              <h1 className="text-5xl leading-none font-bold">
+                {activeComponent?.name ?? "Components"}
+              </h1>
+              <p className="mt-5 max-w-4xl text-lg leading-relaxed text-muted-foreground">
+                {isChatbot
+                  ? chatbotDescription
+                  : example?.description ?? "Preview the selected xDS component."}
+              </p>
+            </header>
 
-        {isChatbot ? (
+            {isChatbot ? (
           <section
             aria-label="Chatbot example"
             className="mt-10 flex h-[min(56rem,calc(100svh-6rem))] min-h-[36rem] flex-col border border-border"
@@ -1036,38 +1105,40 @@ export function App() {
             <ChatbotExample />
           </section>
         ) : (
-        <section
-          aria-label={`${activeComponent?.name ?? "Component"} preview`}
-          className="mt-10 flex min-h-[28rem] flex-col border border-border"
-        >
-          <div className="flex flex-1 items-center justify-center p-6 md:p-10">
-            {example ? (
-              example.preview({
-                suggestionsPlacement,
-                showSuggestionsLabel,
-                onSuggestionsPlacementChange: setSuggestionsPlacement,
-                onShowSuggestionsLabelChange: setShowSuggestionsLabel,
-              })
-            ) : (
-              <p className="text-muted-foreground">
-                Add a preview for this component to the component examples.
-              </p>
-            )}
-          </div>
+              <section
+                aria-label={`${activeComponent?.name ?? "Component"} preview`}
+                className="mt-10 flex min-h-[28rem] flex-col border border-border"
+              >
+                <div className="flex flex-1 items-center justify-center p-6 md:p-10">
+                  {example ? (
+                    example.preview({
+                      suggestionsPlacement,
+                      showSuggestionsLabel,
+                      onSuggestionsPlacementChange: setSuggestionsPlacement,
+                      onShowSuggestionsLabelChange: setShowSuggestionsLabel,
+                    })
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Add a preview for this component to the component examples.
+                    </p>
+                  )}
+                </div>
 
-          <details className="group border-t border-border">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-5 py-3 text-muted-foreground marker:hidden">
-              <ChevronRight
-                aria-hidden="true"
-                className="size-4 transition-transform group-open:rotate-90"
-              />
-              Code
-            </summary>
-            <pre className="overflow-x-auto border-t border-border bg-muted/30 p-5 text-sm leading-relaxed">
-              <code>{exampleCode ?? "// Preview not yet configured"}</code>
-            </pre>
-          </details>
-        </section>
+                <details className="group border-t border-border">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-5 py-3 text-muted-foreground marker:hidden">
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="size-4 transition-transform group-open:rotate-90"
+                    />
+                    Code
+                  </summary>
+                  <pre className="overflow-x-auto border-t border-border bg-muted/30 p-5 text-sm leading-relaxed">
+                    <code>{exampleCode ?? "// Preview not yet configured"}</code>
+                  </pre>
+                </details>
+              </section>
+            )}
+          </>
         )}
       </main>
     </div>

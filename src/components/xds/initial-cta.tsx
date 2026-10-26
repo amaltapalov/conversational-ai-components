@@ -1,6 +1,15 @@
-import { useEffect, useState, type DragEvent, type FormEvent } from "react"
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type DragEvent,
+  type FormEvent,
+} from "react"
 import {
   ArrowUp,
+  ChevronDown,
+  ChevronUp,
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
@@ -124,10 +133,53 @@ function InitialCta({
   )
   const [attachmentNotice, setAttachmentNotice] = useState("")
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(false)
+  const [measuredAttachmentRows, setMeasuredAttachmentRows] = useState({
+    key: "",
+    firstRowCount: 0,
+  })
+  const attachmentListId = useId()
+  const attachmentListRef = useRef<HTMLDivElement>(null)
   const selectedMode = mode ?? uncontrolledMode
   const selectedTemplateId = templateId ?? uncontrolledTemplateId
   const selectedAttachments = attachments ?? uncontrolledAttachments
+  const attachmentLayoutKey = selectedAttachments
+    .map((file) => `${file.name}-${file.size}-${file.lastModified}`)
+    .join("|")
+  const hasMultipleAttachmentRows =
+    measuredAttachmentRows.key === attachmentLayoutKey &&
+    measuredAttachmentRows.firstRowCount < selectedAttachments.length
   const canSubmit = value.trim().length > 0 && !disabled
+
+  useEffect(() => {
+    const list = attachmentListRef.current
+    if (!list || !attachmentLayoutKey) return
+
+    function measureRows() {
+      const firstItem = list.firstElementChild as HTMLElement | null
+      const firstRowTop = firstItem?.offsetTop
+      const firstRowCount =
+        firstRowTop === undefined
+          ? 0
+          : Array.from(list.children).filter(
+              (item) => (item as HTMLElement).offsetTop === firstRowTop
+            ).length
+
+      setMeasuredAttachmentRows({
+        key: attachmentLayoutKey,
+        firstRowCount,
+      })
+    }
+
+    const observer = new ResizeObserver(measureRows)
+    observer.observe(list)
+    const frameId = window.requestAnimationFrame(measureRows)
+
+    return () => {
+      observer.disconnect()
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [attachmentLayoutKey])
 
   function updateMode(nextMode: string | null) {
     if (nextMode === null) return
@@ -238,44 +290,104 @@ function InitialCta({
             onDrop={handleFilesDrop}
           >
             {selectedAttachments.length > 0 && (
-              <div
-                aria-label="Attached files"
-                className="flex gap-2 overflow-x-auto border-b border-border px-3 py-2"
-                role="list"
-              >
-                {selectedAttachments.map((file) => (
+              <div className="border-b border-border px-3 py-2">
+                <div
+                  className={cn(
+                    "grid items-start gap-2",
+                    hasMultipleAttachmentRows
+                      ? "grid-cols-[minmax(0,1fr)_1.5rem]"
+                      : "grid-cols-1"
+                  )}
+                >
                   <div
-                    key={`${file.name}-${file.size}-${file.lastModified}`}
-                    className="flex min-w-0 max-w-52 shrink-0 items-center gap-2 border border-border bg-muted/60 px-2 py-1.5 dark:bg-gray-900"
-                    role="listitem"
-                  >
-                    {isImageAttachment(file) ? (
-                      <AttachmentThumbnail file={file} />
-                    ) : (
-                      <AttachmentTypeIcon file={file} />
+                    id={attachmentListId}
+                    ref={attachmentListRef}
+                    aria-label="Attached files"
+                    className={cn(
+                      "grid min-w-0 grid-cols-2 gap-2 overflow-hidden sm:grid-cols-3",
+                      !attachmentsExpanded && "max-h-12"
                     )}
-                    <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium text-foreground">
-                        {file.name}
-                      </span>
-                      <span className="block text-[10px] uppercase text-muted-foreground">
-                        {getFileExtension(file.name)}
-                      </span>
-                    </span>
+                    role="list"
+                  >
+                    {selectedAttachments.map((file, index) => {
+                      const isCollapsedRow =
+                        !attachmentsExpanded &&
+                        hasMultipleAttachmentRows &&
+                        index >= measuredAttachmentRows.firstRowCount
+
+                      return (
+                        <div
+                          key={`${file.name}-${file.size}-${file.lastModified}`}
+                          aria-hidden={isCollapsedRow}
+                          className={cn(
+                            "flex min-w-0 max-w-52 items-center gap-2 border border-border bg-muted/60 px-2 py-1.5 dark:bg-gray-900",
+                            isCollapsedRow && "invisible"
+                          )}
+                          inert={isCollapsedRow}
+                          role="listitem"
+                        >
+                          {isImageAttachment(file) ? (
+                            <AttachmentThumbnail file={file} />
+                          ) : (
+                            <AttachmentTypeIcon file={file} />
+                          )}
+                          <span className="min-w-0">
+                            <span
+                              className="block truncate text-xs font-medium text-foreground"
+                              title={file.name}
+                            >
+                              {file.name}
+                            </span>
+                            <span className="block text-[10px] uppercase text-muted-foreground">
+                              {getFileExtension(file.name)}
+                            </span>
+                          </span>
+                          <Button
+                            aria-label={`Remove ${file.name}`}
+                            className="shrink-0"
+                            disabled={disabled}
+                            size="icon-xs"
+                            title={`Remove ${file.name}`}
+                            type="button"
+                            variant="tertiary"
+                            onClick={() => removeAttachment(file)}
+                          >
+                            <X aria-hidden="true" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {hasMultipleAttachmentRows && (
                     <Button
-                      aria-label={`Remove ${file.name}`}
-                      className="shrink-0"
-                      disabled={disabled}
+                      aria-controls={attachmentListId}
+                      aria-expanded={attachmentsExpanded}
+                      aria-label={
+                        attachmentsExpanded
+                          ? "Collapse attachments"
+                          : "Expand attachments"
+                      }
+                      className="mt-2 shrink-0 text-muted-foreground"
                       size="icon-xs"
-                      title={`Remove ${file.name}`}
+                      title={
+                        attachmentsExpanded
+                          ? "Collapse attachments"
+                          : "Expand attachments"
+                      }
                       type="button"
                       variant="tertiary"
-                      onClick={() => removeAttachment(file)}
+                      onClick={() =>
+                        setAttachmentsExpanded((expanded) => !expanded)
+                      }
                     >
-                      <X aria-hidden="true" />
+                      {attachmentsExpanded ? (
+                        <ChevronUp aria-hidden="true" />
+                      ) : (
+                        <ChevronDown aria-hidden="true" />
+                      )}
                     </Button>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             )}
 
@@ -476,21 +588,24 @@ function isImageAttachment(file: File) {
 
 function AttachmentTypeIcon({ file }: { file: File }) {
   const extension = getFileExtension(file.name)
-
-  if (extension === "xlsx") {
-    return (
-      <FileSpreadsheet
-        aria-hidden="true"
-        className="size-5 shrink-0 text-muted-foreground"
-      />
-    )
-  }
+  const isSpreadsheet = extension === "xlsx"
+  const Icon = isSpreadsheet ? FileSpreadsheet : FileText
+  const styles = {
+    pdf: "bg-red-100 text-red-700",
+    docx: "bg-chart-16 text-foreground",
+    xlsx: "bg-green-100 text-green-700",
+  }[extension]
 
   return (
-    <FileText
+    <span
       aria-hidden="true"
-      className="size-5 shrink-0 text-muted-foreground"
-    />
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center",
+        styles
+      )}
+    >
+      <Icon className="size-4" />
+    </span>
   )
 }
 

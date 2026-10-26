@@ -6,7 +6,7 @@ import { Button } from "@/components/xds/button"
 type AttachmentsProps = {
   files: File[]
   disabled?: boolean
-  onRemove: (index: number) => void
+  onRemove?: (index: number) => void
 }
 
 type AttachmentKind = "pdf" | "word" | "excel" | "image"
@@ -96,17 +96,19 @@ function Attachments({ files, disabled = false, onRemove }: AttachmentsProps) {
                 {formatFileSize(file.size)}
               </span>
             </span>
-            <Button
-              aria-label={`Remove ${file.name}`}
-              className="self-start"
-              disabled={disabled}
-              size="icon-xs"
-              type="button"
-              variant="tertiary"
-              onClick={() => onRemove(index)}
-            >
-              <X aria-hidden="true" />
-            </Button>
+            {onRemove && (
+              <Button
+                aria-label={`Remove ${file.name}`}
+                className="self-start"
+                disabled={disabled}
+                size="icon-xs"
+                type="button"
+                variant="tertiary"
+                onClick={() => onRemove(index)}
+              >
+                <X aria-hidden="true" />
+              </Button>
+            )}
           </li>
         )
       })}

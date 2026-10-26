@@ -24,7 +24,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/xds/dialog"
-import { InitialCta } from "@/components/xds/initial-cta"
+import { Attachments } from "@/components/xds/attachments"
+import {
+  INITIAL_CTA_ATTACHMENT_ACCEPT,
+  InitialCta,
+  isSupportedInitialCtaAttachment,
+} from "@/components/xds/initial-cta"
 import {
   Sheet,
   SheetContent,
@@ -66,6 +71,7 @@ type Settings = {
 type Turn = {
   id: number
   prompt: string
+  attachments: File[]
   mode: string
   responseIndex: number
   phase: number
@@ -288,11 +294,13 @@ function createTurn(
   id: number,
   prompt: string,
   mode: string,
-  settings: Settings
+  settings: Settings,
+  attachments: File[] = []
 ): Turn {
   return {
     id,
     prompt,
+    attachments,
     mode,
     responseIndex: id % cannedResponses.length,
     phase: 0,
@@ -428,6 +436,7 @@ function SettingsSheet({
 export function ChatbotExample() {
   const [turns, setTurns] = useState<Turn[]>([])
   const [prompt, setPrompt] = useState("")
+  const [attachments, setAttachments] = useState<File[]>([])
   const [mode, setMode] = useState("assistant")
   const [composerNotice, setComposerNotice] = useState("")
   const [nextId, setNextId] = useState(0)
@@ -490,15 +499,20 @@ export function ChatbotExample() {
     if (element) element.scrollTop = element.scrollHeight
   }, [turns])
 
-  function send(text: string, submittedMode = mode) {
+  function send(
+    text: string,
+    submittedMode = mode,
+    submittedAttachments: File[] = attachments
+  ) {
     const trimmed = text.trim()
     if (!trimmed || isRunning) return
     setTurns((current) => [
       ...current,
-      createTurn(nextId, trimmed, submittedMode, settings),
+      createTurn(nextId, trimmed, submittedMode, settings, submittedAttachments),
     ])
     setNextId((current) => current + 1)
     setPrompt("")
+    setAttachments([])
     setComposerNotice("")
   }
 
@@ -516,7 +530,7 @@ export function ChatbotExample() {
     if (!live) return
     setTurns((current) => [
       ...current.slice(0, -1),
-      createTurn(nextId, live.prompt, live.mode, settings),
+      createTurn(nextId, live.prompt, live.mode, settings, live.attachments),
     ])
     setNextId((current) => current + 1)
   }
@@ -524,11 +538,13 @@ export function ChatbotExample() {
   function newChat() {
     setTurns([])
     setPrompt("")
+    setAttachments([])
   }
 
   function editPrompt(turn: Turn) {
     setTurns((current) => current.filter((item) => item.id < turn.id))
     setPrompt(turn.prompt)
+    setAttachments(turn.attachments)
     setMode(turn.mode)
     setComposerNotice("")
   }
@@ -557,13 +573,15 @@ export function ChatbotExample() {
       mode={mode}
       onModeChange={setMode}
       onAttach={() => fileInputRef.current?.click()}
+      attachments={attachments}
+      onAttachmentsChange={setAttachments}
       onVoiceInput={() => setComposerNotice("Voice input is not connected in this demo.")}
       submitLabel="Send"
       disabled={isRunning}
       value={prompt}
       onValueChange={setPrompt}
-      onSubmit={({ prompt: submitted, mode: submittedMode }) =>
-        send(submitted, submittedMode)
+      onSubmit={({ prompt: submitted, mode: submittedMode, attachments: submittedAttachments }) =>
+        send(submitted, submittedMode, submittedAttachments)
       }
     />
   )
@@ -572,12 +590,37 @@ export function ChatbotExample() {
     <div className="flex h-full min-h-0 flex-col">
       <input
         ref={fileInputRef}
-        accept=".pdf,.doc,.docx,.txt,.md"
+        accept={INITIAL_CTA_ATTACHMENT_ACCEPT}
         className="sr-only"
+        multiple
         type="file"
         onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) setComposerNotice(`${file.name} attached (demo only).`)
+          const selectedFiles = Array.from(event.target.files ?? [])
+          const acceptedFiles = selectedFiles.filter(
+            isSupportedInitialCtaAttachment
+          )
+          const rejectedFiles = selectedFiles.filter(
+            (file) => !isSupportedInitialCtaAttachment(file)
+          )
+
+          setAttachments((current) =>
+            [...current, ...acceptedFiles].filter(
+              (file, index, allFiles) =>
+                allFiles.findIndex(
+                  (item) =>
+                    item.name === file.name &&
+                    item.size === file.size &&
+                    item.lastModified === file.lastModified
+                ) === index
+            )
+          )
+          setComposerNotice(
+            rejectedFiles.length > 0
+              ? "Only PDF, DOCX, XLSX, PNG, and JPG files can be attached."
+              : acceptedFiles.length > 0
+                ? `${acceptedFiles.length} file${acceptedFiles.length === 1 ? "" : "s"} attached.`
+                : ""
+          )
           event.target.value = ""
         }}
       />
@@ -663,6 +706,9 @@ export function ChatbotExample() {
                           {turn.mode === "assistant" ? "Assistant" : "Novartis Chat"}
                         </p>
                         <p>{turn.prompt}</p>
+                        {turn.attachments.length > 0 && (
+                          <Attachments files={turn.attachments} />
+                        )}
                       </div>
                       <div className="flex justify-end gap-0">
                         <Button
