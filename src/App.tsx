@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/xds/card"
 import {
-  Citations,
+  Sources,
   CitationReference,
   type CitationItem,
 } from "@/components/xds/citations"
@@ -312,10 +312,10 @@ const exampleCitations: CitationItem[] = [
   },
 ]
 
-function CitationsPreview() {
+function SourcesPreview() {
   return (
-    <Citations
-      ariaLabel="References"
+    <Sources
+      ariaLabel="Sources"
       className="w-full max-w-2xl"
       items={exampleCitations}
     >
@@ -325,7 +325,7 @@ function CitationsPreview() {
         systems also have dedicated risk considerations
         <CitationReference citationId="deployment-checklist" />.
       </p>
-    </Citations>
+    </Sources>
   )
 }
 
@@ -685,13 +685,13 @@ const componentExamples: Record<string, ComponentExample> = {
   },
 ]
 
-<Citations items={sources}>
+<Sources items={sources}>
   <p>
     Risk reviews should continue as systems evolve
     <CitationReference citationId="risk-framework" />.
   </p>
-</Citations>`,
-    preview: () => <CitationsPreview />,
+</Sources>`,
+  preview: () => <SourcesPreview />,
   },
   dialog: {
     description: "A modal surface for focused tasks and important decisions.",
@@ -881,7 +881,8 @@ const componentItems: NavItem[] = Object.keys(
 
   return {
     id,
-    name: id === "initial-cta" ? "Initial CTA" : name,
+    name:
+      id === "initial-cta" ? "Initial CTA" : id === "citations" ? "Sources" : name,
     example: componentExamples[id],
   }
 })
@@ -912,7 +913,7 @@ const componentGroups: { name: string; items: NavItem[] }[] = [
 const navItems = componentGroups.flatMap((group) => group.items)
 
 const chatbotDescription =
-  "A working chat demo that combines General and Conversational AI components. Send any prompt to see the assistant think, ask for approval, and answer with sources."
+  "A working chat demo that combines General and Conversational AI components. Send any prompt to see the assistant think and answer with sources, with approval available in Settings."
 
 const initialComponent = componentItems.find((item) => item.id === "card")
   ?.id ?? componentItems[0]?.id ?? ""

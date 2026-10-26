@@ -21,7 +21,7 @@ type ResolvedCitation = {
 const CitationContext = createContext<Map<string, ResolvedCitation> | null>(null)
 const citationNumberClassName = "font-semibold text-accent-brand"
 
-export type CitationsProps = {
+export type SourcesProps = {
   items: CitationItem[]
   children: ReactNode
   className?: string
@@ -36,7 +36,7 @@ export type CitationReferenceProps = {
   className?: string
 }
 
-function Citations({
+function Sources({
   items,
   children,
   className,
@@ -44,7 +44,7 @@ function Citations({
   showDisclosure = true,
   summaryContent,
   toolbar,
-}: CitationsProps) {
+}: SourcesProps) {
   const instanceId = useId().replaceAll(":", "")
   const citationsById = new Map(
     items.map((item, index) => [
@@ -59,14 +59,14 @@ function Citations({
 
   return (
     <CitationContext.Provider value={citationsById}>
-      <div data-slot="citations" className={cn("space-y-6", className)}>
-        <div data-slot="citations-content" className="leading-relaxed">
+      <div data-slot="sources" className={cn("space-y-6", className)}>
+        <div data-slot="sources-content" className="leading-relaxed">
           {children}
         </div>
         {items.length > 0 && showDisclosure && (
           <div className="flex items-start justify-between gap-4">
             <details
-              data-slot="citations-disclosure"
+              data-slot="sources-disclosure"
               className="group/citations"
             >
               <summary className="flex w-fit cursor-pointer list-none items-center gap-2 text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
@@ -82,7 +82,7 @@ function Citations({
               </summary>
               <ol
                 aria-label={ariaLabel}
-                data-slot="citations-list"
+                data-slot="sources-list"
                 className="mt-3 flex flex-col items-start gap-2"
               >
                 {items.map((item, index) => {
@@ -158,4 +158,4 @@ function CitationReference({
   )
 }
 
-export { Citations, CitationReference }
+export { Sources, CitationReference }

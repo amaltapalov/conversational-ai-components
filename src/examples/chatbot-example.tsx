@@ -12,7 +12,7 @@ import {
 
 import { Button } from "@/components/xds/button"
 import {
-  Citations,
+  Sources,
   CitationReference,
   type CitationItem,
 } from "@/components/xds/citations"
@@ -436,7 +436,7 @@ export function ChatbotExample() {
   const [feedbackTurnId, setFeedbackTurnId] = useState<number | null>(null)
   const [feedbackText, setFeedbackText] = useState("")
   const [settings, setSettings] = useState<Settings>({
-    requireApproval: true,
+    requireApproval: false,
     simulateError: false,
     streamAnswer: true,
   })
@@ -722,13 +722,17 @@ export function ChatbotExample() {
 
                     {status === "complete" && (
                       <div aria-busy={!answerDone} className="space-y-4">
-                        <Citations
+                        <Sources
                           ariaLabel="Sources"
                           items={response.sources}
                           showDisclosure={answerDone}
                           toolbar={
                             answerDone ? (
-                              <>
+                              <div
+                                aria-label="Answer actions"
+                                className="flex shrink-0 items-center gap-0.5"
+                                role="group"
+                              >
                                 <Button
                                   aria-label={copiedId === turn.id ? "Copied to clipboard" : "Copy answer"}
                                   size="icon-xs"
@@ -793,7 +797,7 @@ export function ChatbotExample() {
                                     <RotateCcw aria-hidden="true" />
                                   </Button>
                                 )}
-                              </>
+                              </div>
                             ) : undefined
                           }
                         >
@@ -801,7 +805,7 @@ export function ChatbotExample() {
                             responseIndex={turn.responseIndex}
                             wordCount={turn.wordCount}
                           />
-                        </Citations>
+                        </Sources>
 
                         {answerDone && (
                           <Dialog
