@@ -12,8 +12,8 @@ import {
 
 import { Button } from "@/components/xds/button"
 import {
+  Citations,
   CitationReference,
-  Sources,
   type CitationItem,
 } from "@/components/xds/citations"
 import {
@@ -722,7 +722,7 @@ export function ChatbotExample() {
 
                     {status === "complete" && (
                       <div aria-busy={!answerDone} className="space-y-4">
-                        <Sources
+                        <Citations
                           ariaLabel="Sources"
                           items={response.sources}
                           showDisclosure={answerDone}
@@ -801,7 +801,7 @@ export function ChatbotExample() {
                             responseIndex={turn.responseIndex}
                             wordCount={turn.wordCount}
                           />
-                        </Sources>
+                        </Citations>
 
                         {answerDone && (
                           <Dialog
