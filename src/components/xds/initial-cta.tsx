@@ -1,8 +1,7 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { ArrowUp, Mic, Paperclip, Plus } from "lucide-react"
 
 import { cn } from "cn"
-import { Attachments } from "@/components/xds/attachments"
 import { Button } from "@/components/xds/button"
 import {
   Select,
@@ -31,7 +30,6 @@ export type InitialCtaSubmitPayload = {
   prompt: string
   mode?: string
   templateId?: string
-  attachments?: File[]
 }
 
 export type InitialCtaProps = {
@@ -52,8 +50,6 @@ export type InitialCtaProps = {
   defaultTemplateId?: string
   onTemplateChange?: (templateId: string | undefined) => void
   onAttach?: () => void
-  attachments?: File[]
-  onAttachmentsChange?: (files: File[]) => void
   onVoiceInput?: () => void
   disclaimer?: string
   attachLabel?: string
@@ -79,11 +75,9 @@ function InitialCta({
   defaultTemplateId,
   onTemplateChange,
   onAttach,
-  attachments,
-  onAttachmentsChange,
   onVoiceInput,
   disclaimer = "AI responses may be inaccurate. Verify important information.",
-  attachLabel = "Add",
+  attachLabel = "Attach",
   submitLabel = "Generate",
   disabled = false,
 }: InitialCtaProps) {
@@ -93,48 +87,9 @@ function InitialCta({
   const [uncontrolledTemplateId, setUncontrolledTemplateId] = useState(
     defaultTemplateId
   )
-  const [uncontrolledAttachments, setUncontrolledAttachments] = useState<File[]>([])
-  const [attachmentError, setAttachmentError] = useState("")
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const selectedMode = mode ?? uncontrolledMode
   const selectedTemplateId = templateId ?? uncontrolledTemplateId
-  const selectedAttachments = attachments ?? uncontrolledAttachments
   const canSubmit = value.trim().length > 0 && !disabled
-  const acceptedFileTypes = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
-
-  function updateAttachments(nextAttachments: File[]) {
-    if (attachments === undefined) setUncontrolledAttachments(nextAttachments)
-    onAttachmentsChange?.(nextAttachments)
-  }
-
-  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
-    const selectedFiles = Array.from(event.target.files ?? [])
-    const validFiles = selectedFiles.filter((file) =>
-      /\.(pdf|doc|docx|xls|xlsx|jpg|png)$/i.test(file.name)
-    )
-
-    setAttachmentError(
-      validFiles.length === selectedFiles.length
-        ? ""
-        : "Some files were skipped. Choose PDF, Word, Excel, JPG, or PNG files."
-    )
-    if (validFiles.length > 0) {
-      updateAttachments([...selectedAttachments, ...validFiles])
-    }
-    event.target.value = ""
-  }
-
-  function handleAttach() {
-    if (onAttach) {
-      onAttach()
-      return
-    }
-    fileInputRef.current?.click()
-  }
-
-  function removeAttachment(index: number) {
-    updateAttachments(selectedAttachments.filter((_, itemIndex) => itemIndex !== index))
-  }
 
   function updateMode(nextMode: string | null) {
     if (nextMode === null) return
@@ -164,9 +119,6 @@ function InitialCta({
       prompt,
       ...(selectedMode ? { mode: selectedMode } : {}),
       ...(selectedTemplateId ? { templateId: selectedTemplateId } : {}),
-      ...(selectedAttachments.length > 0
-        ? { attachments: selectedAttachments }
-        : {}),
     })
   }
 
@@ -176,15 +128,6 @@ function InitialCta({
         className={cn("w-full", className)}
         onSubmit={handleSubmit}
       >
-          <input
-            ref={fileInputRef}
-            accept={acceptedFileTypes}
-            aria-label="Choose files to attach"
-            className="sr-only"
-            multiple
-            type="file"
-            onChange={handleFileSelection}
-          />
           <div
             className={cn(
               "border border-border focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800",
@@ -204,30 +147,21 @@ function InitialCta({
               }}
             />
 
-            <Attachments
-              disabled={disabled}
-              files={selectedAttachments}
-              onRemove={removeAttachment}
-            />
-            {attachmentError && (
-              <p className="px-3 pt-2 text-sm text-destructive" role="alert">
-                {attachmentError}
-              </p>
-            )}
-
             <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
               <div className="flex min-w-0 flex-wrap items-center gap-3">
-                <Button
-                  aria-label={attachLabel}
-                  disabled={disabled}
-                  size="icon-sm"
-                  title={attachLabel}
-                  type="button"
-                  variant="outline"
-                  onClick={handleAttach}
-                >
-                  <Plus aria-hidden="true" />
-                </Button>
+                {onAttach && (
+                  <Button
+                    aria-label={attachLabel}
+                    disabled={disabled}
+                    size="icon-sm"
+                    title={attachLabel}
+                    type="button"
+                    variant="outline"
+                    onClick={onAttach}
+                  >
+                    <Plus aria-hidden="true" />
+                  </Button>
+                )}
 
                 {modes.length > 0 && (
                   <div
@@ -295,15 +229,6 @@ function InitialCta({
       className={cn("w-full space-y-4", className)}
       onSubmit={handleSubmit}
     >
-        <input
-          ref={fileInputRef}
-          accept={acceptedFileTypes}
-          aria-label="Choose files to attach"
-          className="sr-only"
-          multiple
-          type="file"
-          onChange={handleFileSelection}
-        />
         <header className="space-y-1">
           <h2 className="text-xl font-medium text-foreground">{title}</h2>
           {description && (
@@ -323,17 +248,6 @@ function InitialCta({
               onValueChange(event.target.value)
             }}
           />
-
-          <Attachments
-            disabled={disabled}
-            files={selectedAttachments}
-            onRemove={removeAttachment}
-          />
-          {attachmentError && (
-            <p className="px-3 pt-2 text-sm text-destructive" role="alert">
-              {attachmentError}
-            </p>
-          )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -377,17 +291,19 @@ function InitialCta({
                 </Select>
               )}
 
-              <Button
-                aria-label={attachLabel}
-                disabled={disabled}
-                size="icon-sm"
-                title={attachLabel}
-                type="button"
-                variant="tertiary"
-                onClick={handleAttach}
-              >
-                <Paperclip aria-hidden="true" />
-              </Button>
+              {onAttach && (
+                <Button
+                  aria-label={attachLabel}
+                  disabled={disabled}
+                  size="sm"
+                  type="button"
+                  variant="tertiary"
+                  onClick={onAttach}
+                >
+                  <Paperclip aria-hidden="true" />
+                  {attachLabel}
+                </Button>
+              )}
             </div>
 
             <Button disabled={!canSubmit} type="submit">
