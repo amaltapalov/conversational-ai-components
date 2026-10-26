@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { ChevronRight } from "lucide-react"
 
 import {
@@ -41,7 +41,9 @@ import {
   SheetTrigger,
 } from "@/components/xds/sheet"
 import {
+  INITIAL_CTA_ATTACHMENT_ACCEPT,
   InitialCta,
+  isSupportedInitialCtaAttachment,
   type InitialCtaSubmitPayload,
 } from "@/components/xds/initial-cta"
 import {
@@ -110,11 +112,13 @@ function InitialCtaPreview({
 }: ComponentExamplePreviewProps) {
   const [prompt, setPrompt] = useState("")
   const [mode, setMode] = useState("assistant")
+  const [attachments, setAttachments] = useState<File[]>([])
   const [feedback, setFeedback] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleSubmit(payload: InitialCtaSubmitPayload) {
     setFeedback(
-      `Ready to ${payload.mode ?? "create"}${payload.templateId ? ` with ${payload.templateId}` : ""}: ${payload.prompt}`
+      `Ready to ${payload.mode ?? "create"}${payload.templateId ? ` with ${payload.templateId}` : ""}: ${payload.prompt}${payload.attachments.length > 0 ? ` (${payload.attachments.length} file${payload.attachments.length === 1 ? "" : "s"} attached)` : ""}`
     )
   }
 
@@ -176,6 +180,40 @@ function InitialCtaPreview({
       </div>
 
       <div className="space-y-4">
+        <input
+          ref={fileInputRef}
+          accept={INITIAL_CTA_ATTACHMENT_ACCEPT}
+          className="sr-only"
+          multiple
+          type="file"
+          onChange={(event) => {
+            const selectedFiles = Array.from(event.target.files ?? [])
+            const acceptedFiles = selectedFiles.filter(
+              isSupportedInitialCtaAttachment
+            )
+            const rejectedFiles = selectedFiles.filter(
+              (file) => !isSupportedInitialCtaAttachment(file)
+            )
+
+            setAttachments((current) =>
+              [...current, ...acceptedFiles].filter(
+                (file, index, allFiles) =>
+                  allFiles.findIndex(
+                    (item) =>
+                      item.name === file.name &&
+                      item.size === file.size &&
+                      item.lastModified === file.lastModified
+                  ) === index
+              )
+            )
+            setFeedback(
+              rejectedFiles.length > 0
+                ? `Only PDF, DOCX, XLSX, PNG, and JPG files can be attached. Rejected: ${rejectedFiles.map((file) => file.name).join(", ")}.`
+                : ""
+            )
+            event.target.value = ""
+          }}
+        />
         {suggestionsPlacement === "above" && suggestionList}
         <InitialCta
           variant="chat"
@@ -186,7 +224,9 @@ function InitialCtaPreview({
             { value: "assistant", label: "Assistant" },
             { value: "novartis-chat", label: "Novartis Chat" },
           ]}
-          onAttach={() => setFeedback("Connect this action to a file or link picker.")}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
+          onAttach={() => fileInputRef.current?.click()}
           onVoiceInput={() => setFeedback("Voice input is ready.")}
           onModeChange={setMode}
           onSubmit={handleSubmit}

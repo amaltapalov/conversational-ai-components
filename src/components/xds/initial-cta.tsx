@@ -1,5 +1,14 @@
-import { useState, type FormEvent } from "react"
-import { ArrowUp, Mic, Paperclip, Plus } from "lucide-react"
+import { useEffect, useState, type DragEvent, type FormEvent } from "react"
+import {
+  ArrowUp,
+  FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  Mic,
+  Paperclip,
+  Plus,
+  X,
+} from "lucide-react"
 
 import { cn } from "cn"
 import { Button } from "@/components/xds/button"
@@ -28,8 +37,27 @@ export type InitialCtaTemplate = {
 
 export type InitialCtaSubmitPayload = {
   prompt: string
+  attachments: File[]
   mode?: string
   templateId?: string
+}
+
+export const INITIAL_CTA_ATTACHMENT_ACCEPT = ".pdf,.docx,.xlsx,.png,.jpg"
+
+const supportedAttachmentExtensions = new Set([
+  "pdf",
+  "docx",
+  "xlsx",
+  "png",
+  "jpg",
+])
+
+function getFileExtension(fileName: string) {
+  return fileName.split(".").pop()?.toLowerCase() ?? ""
+}
+
+export function isSupportedInitialCtaAttachment(file: File) {
+  return supportedAttachmentExtensions.has(getFileExtension(file.name))
 }
 
 export type InitialCtaProps = {
@@ -50,6 +78,8 @@ export type InitialCtaProps = {
   defaultTemplateId?: string
   onTemplateChange?: (templateId: string | undefined) => void
   onAttach?: () => void
+  attachments?: File[]
+  onAttachmentsChange?: (attachments: File[]) => void
   onVoiceInput?: () => void
   disclaimer?: string
   attachLabel?: string
@@ -75,6 +105,8 @@ function InitialCta({
   defaultTemplateId,
   onTemplateChange,
   onAttach,
+  attachments,
+  onAttachmentsChange,
   onVoiceInput,
   disclaimer = "AI responses may be inaccurate. Verify important information.",
   attachLabel = "Attach",
@@ -87,8 +119,14 @@ function InitialCta({
   const [uncontrolledTemplateId, setUncontrolledTemplateId] = useState(
     defaultTemplateId
   )
+  const [uncontrolledAttachments, setUncontrolledAttachments] = useState<File[]>(
+    []
+  )
+  const [attachmentNotice, setAttachmentNotice] = useState("")
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const selectedMode = mode ?? uncontrolledMode
   const selectedTemplateId = templateId ?? uncontrolledTemplateId
+  const selectedAttachments = attachments ?? uncontrolledAttachments
   const canSubmit = value.trim().length > 0 && !disabled
 
   function updateMode(nextMode: string | null) {
@@ -110,6 +148,58 @@ function InitialCta({
     onTemplateChange?.(undefined)
   }
 
+  function updateAttachments(nextAttachments: File[]) {
+    if (attachments === undefined) setUncontrolledAttachments(nextAttachments)
+    onAttachmentsChange?.(nextAttachments)
+  }
+
+  function addAttachments(files: FileList | File[]) {
+    const selectedFiles = Array.from(files)
+    const acceptedFiles = selectedFiles.filter(isSupportedInitialCtaAttachment)
+    const rejectedFiles = selectedFiles.filter(
+      (file) => !isSupportedInitialCtaAttachment(file)
+    )
+    const nextAttachments = [...selectedAttachments, ...acceptedFiles].filter(
+      (file, index, allFiles) =>
+        allFiles.findIndex(
+          (item) =>
+            item.name === file.name &&
+            item.size === file.size &&
+            item.lastModified === file.lastModified
+        ) === index
+    )
+
+    updateAttachments(nextAttachments)
+    setAttachmentNotice(
+      rejectedFiles.length > 0
+        ? `Only PDF, DOCX, XLSX, PNG, and JPG files can be attached. Rejected: ${rejectedFiles.map((file) => file.name).join(", ")}.`
+        : acceptedFiles.length > 0
+          ? `${acceptedFiles.length} file${acceptedFiles.length === 1 ? "" : "s"} attached.`
+          : ""
+    )
+  }
+
+  function removeAttachment(fileToRemove: File) {
+    updateAttachments(
+      selectedAttachments.filter((file) => file !== fileToRemove)
+    )
+    setAttachmentNotice("")
+  }
+
+  function handleFilesDragOver(event: DragEvent<HTMLDivElement>) {
+    if (disabled || !event.dataTransfer.types.includes("Files")) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "copy"
+    setIsDraggingFiles(true)
+  }
+
+  function handleFilesDrop(event: DragEvent<HTMLDivElement>) {
+    if (disabled || !event.dataTransfer.types.includes("Files")) return
+    event.preventDefault()
+    setIsDraggingFiles(false)
+    addAttachments(event.dataTransfer.files)
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const prompt = value.trim()
@@ -117,6 +207,7 @@ function InitialCta({
 
     onSubmit({
       prompt,
+      attachments: selectedAttachments,
       ...(selectedMode ? { mode: selectedMode } : {}),
       ...(selectedTemplateId ? { templateId: selectedTemplateId } : {}),
     })
@@ -131,9 +222,63 @@ function InitialCta({
           <div
             className={cn(
               "border border-border focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800",
+              isDraggingFiles && "border-ring ring-3 ring-ring/50",
               disabled ? "bg-muted dark:bg-gray-900" : "bg-background dark:bg-gray-900"
             )}
+            onDragEnter={handleFilesDragOver}
+            onDragLeave={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(event.relatedTarget)
+              ) {
+                setIsDraggingFiles(false)
+              }
+            }}
+            onDragOver={handleFilesDragOver}
+            onDrop={handleFilesDrop}
           >
+            {selectedAttachments.length > 0 && (
+              <div
+                aria-label="Attached files"
+                className="flex gap-2 overflow-x-auto border-b border-border px-3 py-2"
+                role="list"
+              >
+                {selectedAttachments.map((file) => (
+                  <div
+                    key={`${file.name}-${file.size}-${file.lastModified}`}
+                    className="flex min-w-0 max-w-52 shrink-0 items-center gap-2 border border-border bg-muted/60 px-2 py-1.5 dark:bg-gray-900"
+                    role="listitem"
+                  >
+                    {isImageAttachment(file) ? (
+                      <AttachmentThumbnail file={file} />
+                    ) : (
+                      <AttachmentTypeIcon file={file} />
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium text-foreground">
+                        {file.name}
+                      </span>
+                      <span className="block text-[10px] uppercase text-muted-foreground">
+                        {getFileExtension(file.name)}
+                      </span>
+                    </span>
+                    <Button
+                      aria-label={`Remove ${file.name}`}
+                      className="shrink-0"
+                      disabled={disabled}
+                      size="icon-xs"
+                      title={`Remove ${file.name}`}
+                      type="button"
+                      variant="tertiary"
+                      onClick={() => removeAttachment(file)}
+                    >
+                      <X aria-hidden="true" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <Textarea
               aria-label={title}
               className="min-h-16 resize-none border-0 bg-transparent px-4 py-4 text-sm md:text-base focus-visible:border-transparent focus-visible:ring-0 disabled:!bg-muted disabled:!opacity-100 dark:disabled:!bg-gray-900"
@@ -215,6 +360,14 @@ function InitialCta({
               )}
             </div>
           </div>
+          {attachmentNotice && (
+            <p
+              className="px-3 pt-2 text-xs text-muted-foreground"
+              role="status"
+            >
+              {attachmentNotice}
+            </p>
+          )}
           {disclaimer && (
             <p className="border border-t-0 border-border bg-muted px-4 py-3 text-sm text-muted-foreground dark:border-gray-800 dark:bg-gray-900">
               {disclaimer}
@@ -313,6 +466,58 @@ function InitialCta({
           </div>
         </div>
     </form>
+  )
+}
+
+function isImageAttachment(file: File) {
+  const extension = getFileExtension(file.name)
+  return extension === "png" || extension === "jpg"
+}
+
+function AttachmentTypeIcon({ file }: { file: File }) {
+  const extension = getFileExtension(file.name)
+
+  if (extension === "xlsx") {
+    return (
+      <FileSpreadsheet
+        aria-hidden="true"
+        className="size-5 shrink-0 text-muted-foreground"
+      />
+    )
+  }
+
+  return (
+    <FileText
+      aria-hidden="true"
+      className="size-5 shrink-0 text-muted-foreground"
+    />
+  )
+}
+
+function AttachmentThumbnail({ file }: { file: File }) {
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>()
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    const timeoutId = window.setTimeout(() => setThumbnailUrl(url), 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      URL.revokeObjectURL(url)
+    }
+  }, [file])
+
+  return thumbnailUrl ? (
+    <img
+      alt=""
+      className="size-8 shrink-0 object-cover"
+      src={thumbnailUrl}
+    />
+  ) : (
+    <ImageIcon
+      aria-hidden="true"
+      className="size-5 shrink-0 text-muted-foreground"
+    />
   )
 }
 
