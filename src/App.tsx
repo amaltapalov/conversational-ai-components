@@ -22,15 +22,6 @@ import {
   type CitationItem,
 } from "@/components/xds/citations"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/xds/dialog"
-import {
   Sheet,
   SheetClose,
   SheetContent,
@@ -56,7 +47,6 @@ import {
   SelectValue,
 } from "@/components/xds/select"
 import { Textarea } from "@/components/xds/textarea"
-import { ChatbotExample } from "@/examples/chatbot-example"
 import {
   StreamOfThought,
   type StreamOfThoughtStatus,
@@ -70,12 +60,6 @@ type ComponentExample = {
 }
 
 type SuggestionsPlacement = "above" | "below"
-
-type NavItem = {
-  id: string
-  name: string
-  example?: ComponentExample
-}
 
 type ComponentExampleCodeProps = {
   suggestionsPlacement: SuggestionsPlacement
@@ -207,7 +191,6 @@ function InitialCtaPreview({
 function SuggestionsPreview() {
   const [prompt, setPrompt] = useState("")
   const [showLabel, setShowLabel] = useState(true)
-  const [feedback, setFeedback] = useState("")
 
   return (
     <div className="w-full max-w-3xl space-y-4">
@@ -220,21 +203,13 @@ function SuggestionsPreview() {
         />
         Show "Try one of these"
       </label>
-      <InitialCta
-        variant="chat"
-        title="Ask a question"
-        placeholder="Choose a suggestion or write your own..."
+      <Textarea
+        aria-label="Prompt preview"
+        className="min-h-32"
+        placeholder="Choose a suggestion to start..."
         value={prompt}
-        onValueChange={setPrompt}
-        onSubmit={({ prompt: submittedPrompt }) =>
-          setFeedback(`Ready to submit: ${submittedPrompt}`)
-        }
+        onChange={(event) => setPrompt(event.target.value)}
       />
-      {feedback && (
-        <p className="text-sm text-muted-foreground" role="status">
-          {feedback}
-        </p>
-      )}
       <div className="space-y-2">
         {showLabel && (
           <p className="text-sm font-medium text-muted-foreground">
@@ -326,33 +301,6 @@ function CitationsPreview() {
         <CitationReference citationId="deployment-checklist" />.
       </p>
     </Citations>
-  )
-}
-
-function DialogPreview() {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" />}>Open dialog</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Confirm action</DialogTitle>
-          <DialogDescription>
-            Review this action before continuing.
-          </DialogDescription>
-        </DialogHeader>
-        <p className="text-muted-foreground">Dialog content goes here.</p>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={() => setOpen(false)}>
-            Confirm
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -693,25 +641,6 @@ const componentExamples: Record<string, ComponentExample> = {
 </Citations>`,
     preview: () => <CitationsPreview />,
   },
-  dialog: {
-    description: "A modal surface for focused tasks and important decisions.",
-    code: `<Dialog>
-  <DialogTrigger render={<Button variant="outline" />}>
-    Open dialog
-  </DialogTrigger>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Confirm action</DialogTitle>
-      <DialogDescription>Review before continuing.</DialogDescription>
-    </DialogHeader>
-    <DialogFooter>
-      <Button variant="outline">Cancel</Button>
-      <Button>Confirm</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>`,
-    preview: () => <DialogPreview />,
-  },
   select: {
     description: "A menu for choosing one option from a list.",
     code: `<Select value={mode} onValueChange={setMode}>
@@ -802,21 +731,13 @@ const componentExamples: Record<string, ComponentExample> = {
   },
   suggestions: {
     description: "Prompt starters that help people discover what they can ask.",
-    code: `const [prompt, setPrompt] = useState("")
-const showLabel = true
+    code: `const showLabel = true
 
-<div className="space-y-4">
-  <InitialCta
-    variant="chat"
-    title="Ask a question"
-    value={prompt}
-    onValueChange={setPrompt}
-    onSubmit={handleSubmit}
-  />
+<div>
   {showLabel && <p>Try one of these</p>}
   <Suggestions
     items={suggestions}
-    onSelect={setPrompt}
+    onSelect={(prompt) => setPrompt(prompt)}
   />
 </div>`,
     preview: () => <SuggestionsPreview />,
@@ -870,7 +791,7 @@ const showLabel = true
   },
 }
 
-const componentItems: NavItem[] = Object.keys(
+const componentItems = Object.keys(
   import.meta.glob("./components/xds/*.tsx")
 ).map((path) => {
   const id = path.split("/").pop()?.replace(/\.tsx$/, "") ?? ""
@@ -894,7 +815,7 @@ const conversationalAiIds = new Set([
   "suggestions",
 ])
 
-const componentGroups: { name: string; items: NavItem[] }[] = [
+const componentGroups = [
   {
     name: "General",
     items: componentItems.filter((item) => !conversationalAiIds.has(item.id)),
@@ -903,16 +824,7 @@ const componentGroups: { name: string; items: NavItem[] }[] = [
     name: "Conversational AI",
     items: componentItems.filter((item) => conversationalAiIds.has(item.id)),
   },
-  {
-    name: "Example",
-    items: [{ id: "chatbot", name: "Chatbot" }],
-  },
 ]
-
-const navItems = componentGroups.flatMap((group) => group.items)
-
-const chatbotDescription =
-  "A working chat demo that combines General and Conversational AI components. Send any prompt to see the assistant think, ask for approval, and answer with sources."
 
 const initialComponent = componentItems.find((item) => item.id === "card")
   ?.id ?? componentItems[0]?.id ?? ""
@@ -922,8 +834,9 @@ export function App() {
   const [suggestionsPlacement, setSuggestionsPlacement] =
     useState<SuggestionsPlacement>("below")
   const [showSuggestionsLabel, setShowSuggestionsLabel] = useState(true)
-  const activeComponent = navItems.find((item) => item.id === activeComponentId)
-  const isChatbot = activeComponentId === "chatbot"
+  const activeComponent = componentItems.find(
+    (item) => item.id === activeComponentId
+  )
   const example = activeComponent?.example
   const exampleCode =
     typeof example?.code === "function"
@@ -981,20 +894,10 @@ export function App() {
             {activeComponent?.name ?? "Components"}
           </h1>
           <p className="mt-5 max-w-4xl text-2xl leading-snug text-muted-foreground">
-            {isChatbot
-              ? chatbotDescription
-              : example?.description ?? "Preview the selected xDS component."}
+            {example?.description ?? "Preview the selected xDS component."}
           </p>
         </header>
 
-        {isChatbot ? (
-          <section
-            aria-label="Chatbot example"
-            className="mt-10 flex h-[min(56rem,calc(100svh-6rem))] min-h-[36rem] flex-col border border-border"
-          >
-            <ChatbotExample />
-          </section>
-        ) : (
         <section
           aria-label={`${activeComponent?.name ?? "Component"} preview`}
           className="mt-10 flex min-h-[28rem] flex-col border border-border"
@@ -1027,7 +930,6 @@ export function App() {
             </pre>
           </details>
         </section>
-        )}
       </main>
     </div>
   )

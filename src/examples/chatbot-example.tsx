@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react"
 import {
-  BookOpen,
   Check,
   Copy,
   Pencil,
@@ -13,8 +12,8 @@ import {
 
 import { Button } from "@/components/xds/button"
 import {
-  Citations,
   CitationReference,
+  Sources,
   type CitationItem,
 } from "@/components/xds/citations"
 import {
@@ -723,16 +722,10 @@ export function ChatbotExample() {
 
                     {status === "complete" && (
                       <div aria-busy={!answerDone} className="space-y-4">
-                        <Citations
-                          ariaLabel="References"
+                        <Sources
+                          ariaLabel="Sources"
                           items={response.sources}
                           showDisclosure={answerDone}
-                          summaryContent={
-                            <span className="flex items-center gap-2 font-medium">
-                              <BookOpen aria-hidden="true" className="size-4" />
-                              Sources
-                            </span>
-                          }
                           toolbar={
                             answerDone ? (
                               <>
@@ -808,7 +801,7 @@ export function ChatbotExample() {
                             responseIndex={turn.responseIndex}
                             wordCount={turn.wordCount}
                           />
-                        </Citations>
+                        </Sources>
 
                         {answerDone && (
                           <Dialog
