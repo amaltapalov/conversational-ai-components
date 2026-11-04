@@ -113,6 +113,7 @@ function InitialCtaPreview({
   const [prompt, setPrompt] = useState("")
   const [mode, setMode] = useState("assistant")
   const [attachments, setAttachments] = useState<File[]>([])
+  const [attachmentError, setAttachmentError] = useState("")
   const [feedback, setFeedback] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -206,7 +207,7 @@ function InitialCtaPreview({
                   ) === index
               )
             )
-            setFeedback(
+            setAttachmentError(
               rejectedFiles.length > 0
                 ? `Only PDF, DOCX, XLSX, PNG, and JPG files can be attached. Rejected: ${rejectedFiles.map((file) => file.name).join(", ")}.`
                 : ""
@@ -226,6 +227,8 @@ function InitialCtaPreview({
           ]}
           attachments={attachments}
           onAttachmentsChange={setAttachments}
+          attachmentError={attachmentError}
+          onAttachmentErrorDismiss={() => setAttachmentError("")}
           onAttach={() => fileInputRef.current?.click()}
           onVoiceInput={() => setFeedback("Voice input is ready.")}
           onModeChange={setMode}

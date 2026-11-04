@@ -85,6 +85,8 @@ export type InitialCtaProps = {
   onAttach?: () => void
   attachments?: File[]
   onAttachmentsChange?: (attachments: File[]) => void
+  attachmentError?: string
+  onAttachmentErrorDismiss?: () => void
   onVoiceInput?: () => void
   disclaimer?: string
   attachLabel?: string
@@ -117,6 +119,8 @@ function InitialCta({
   attachLabel = "Attach",
   submitLabel = "Generate",
   disabled = false,
+  attachmentError,
+  onAttachmentErrorDismiss,
 }: InitialCtaProps) {
   const [uncontrolledMode, setUncontrolledMode] = useState(
     defaultMode ?? modes[0]?.value
@@ -127,12 +131,13 @@ function InitialCta({
   const [uncontrolledAttachments, setUncontrolledAttachments] = useState<File[]>(
     []
   )
-  const [attachmentNotice, setAttachmentNotice] = useState("")
+  const [localAttachmentError, setLocalAttachmentError] = useState("")
   const [isDraggingFiles, setIsDraggingFiles] = useState(false)
   const selectedMode = mode ?? uncontrolledMode
   const selectedTemplateId = templateId ?? uncontrolledTemplateId
   const selectedAttachments = attachments ?? uncontrolledAttachments
   const canSubmit = value.trim().length > 0 && !disabled
+  const visibleAttachmentError = localAttachmentError || attachmentError
 
   function updateMode(nextMode: string | null) {
     if (nextMode === null) return
@@ -157,6 +162,10 @@ function InitialCta({
     if (attachments === undefined) setUncontrolledAttachments(nextAttachments)
     onAttachmentsChange?.(nextAttachments)
   }
+  function dismissAttachmentError() {
+    setLocalAttachmentError("")
+    onAttachmentErrorDismiss?.()
+  }
 
   function addAttachments(files: FileList | File[]) {
     const selectedFiles = Array.from(files)
@@ -175,20 +184,19 @@ function InitialCta({
     )
 
     updateAttachments(nextAttachments)
-    setAttachmentNotice(
+    setLocalAttachmentError(
       rejectedFiles.length > 0
         ? `Only PDF, DOCX, XLSX, PNG, and JPG files can be attached. Rejected: ${rejectedFiles.map((file) => file.name).join(", ")}.`
-        : acceptedFiles.length > 0
-          ? `${acceptedFiles.length} file${acceptedFiles.length === 1 ? "" : "s"} attached.`
-          : ""
+        : ""
     )
+    if (rejectedFiles.length === 0) onAttachmentErrorDismiss?.()
   }
 
   function removeAttachment(fileToRemove: File) {
     updateAttachments(
       selectedAttachments.filter((file) => file !== fileToRemove)
     )
-    setAttachmentNotice("")
+    dismissAttachmentError()
   }
 
   function handleFilesDragOver(event: DragEvent<HTMLDivElement>) {
@@ -246,13 +254,13 @@ function InitialCta({
               <div className="border-b border-border px-3 py-2">
                 <div
                   aria-label="Attached files"
-                  className="grid min-w-0 grid-cols-2 items-start gap-1.5 sm:grid-cols-3"
+                  className="grid min-w-0 grid-cols-2 items-start gap-3 sm:grid-cols-3"
                   role="list"
                 >
                   {selectedAttachments.map((file) => (
                     <div
                       key={`${file.name}-${file.size}-${file.lastModified}`}
-                      className="flex min-w-0 max-w-48 items-center gap-1.5 border border-border bg-muted/60 px-1.5 py-1 dark:bg-gray-900"
+                      className="flex w-full min-w-0 items-center gap-1.5 border border-border bg-muted/60 px-1.5 py-1 dark:bg-gray-900"
                       role="listitem"
                     >
                       {isImageAttachment(file) ? (
@@ -369,15 +377,26 @@ function InitialCta({
                 </Button>
               )}
             </div>
-          </div>
-          {attachmentNotice && (
-            <p
-              className="px-3 pt-2 text-xs text-muted-foreground"
-              role="status"
+          {visibleAttachmentError && (
+            <div
+              className="flex items-center gap-2 border-t border-border px-3 py-2 text-xs text-destructive dark:border-gray-800"
+              role="alert"
             >
-              {attachmentNotice}
-            </p>
+              <p className="min-w-0 flex-1">{visibleAttachmentError}</p>
+              <Button
+                aria-label="Dismiss attachment error"
+                className="shrink-0"
+                size="icon-xs"
+                title="Dismiss attachment error"
+                type="button"
+                variant="tertiary"
+                onClick={dismissAttachmentError}
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </div>
           )}
+        </div>
           {disclaimer && (
             <p className="border border-t-0 border-border bg-muted px-4 py-3 text-sm text-muted-foreground dark:border-gray-800 dark:bg-gray-900">
               {disclaimer}

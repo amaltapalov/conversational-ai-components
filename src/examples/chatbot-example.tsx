@@ -439,6 +439,7 @@ export function ChatbotExample() {
   const [attachments, setAttachments] = useState<File[]>([])
   const [mode, setMode] = useState("assistant")
   const [composerNotice, setComposerNotice] = useState("")
+  const [attachmentError, setAttachmentError] = useState("")
   const [nextId, setNextId] = useState(0)
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [copiedPromptId, setCopiedPromptId] = useState<number | null>(null)
@@ -514,6 +515,7 @@ export function ChatbotExample() {
     setPrompt("")
     setAttachments([])
     setComposerNotice("")
+    setAttachmentError("")
   }
 
   function updateLive(update: (turn: Turn) => Turn) {
@@ -539,6 +541,7 @@ export function ChatbotExample() {
     setTurns([])
     setPrompt("")
     setAttachments([])
+    setAttachmentError("")
   }
 
   function editPrompt(turn: Turn) {
@@ -547,6 +550,7 @@ export function ChatbotExample() {
     setAttachments(turn.attachments)
     setMode(turn.mode)
     setComposerNotice("")
+    setAttachmentError("")
   }
 
   async function copyPrompt(turn: Turn) {
@@ -575,6 +579,8 @@ export function ChatbotExample() {
       onAttach={() => fileInputRef.current?.click()}
       attachments={attachments}
       onAttachmentsChange={setAttachments}
+      attachmentError={attachmentError}
+      onAttachmentErrorDismiss={() => setAttachmentError("")}
       onVoiceInput={() => setComposerNotice("Voice input is not connected in this demo.")}
       submitLabel="Send"
       disabled={isRunning}
@@ -614,12 +620,10 @@ export function ChatbotExample() {
                 ) === index
             )
           )
-          setComposerNotice(
+          setAttachmentError(
             rejectedFiles.length > 0
-              ? "Only PDF, DOCX, XLSX, PNG, and JPG files can be attached."
-              : acceptedFiles.length > 0
-                ? `${acceptedFiles.length} file${acceptedFiles.length === 1 ? "" : "s"} attached.`
-                : ""
+              ? `Only PDF, DOCX, XLSX, PNG, and JPG files can be attached. Rejected: ${rejectedFiles.map((file) => file.name).join(", ")}.`
+              : ""
           )
           event.target.value = ""
         }}
