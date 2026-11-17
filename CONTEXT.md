@@ -60,6 +60,7 @@ DS Core AI/
    ├─ main.tsx                StrictMode → ThemeProvider → App
    ├─ App.tsx                 Showcase app (grouped sidebar + preview + code panel)
    ├─ examples/
+   │  ├─ assistant-home-example.tsx  Assistant landing page built on CapabilityIntro
    │  └─ chatbot-example.tsx  Full chat demo composed from XDS components
    ├─ index.css               Imports tailwindcss, tw-animate-css, shadcn/tailwind.css, ../styles/*
    ├─ components/
@@ -75,6 +76,7 @@ DS Core AI/
 |---|---|---|---|
 | [action-plan.tsx](src/components/xds/action-plan.tsx) | `ActionPlan`, types `ActionPlanStep`, `ActionPlanStepStatus`, `ActionPlanStatus`, `ActionPlanMode`, `ActionPlanProps` | `mode`: `contractual` (default, approval gate) \| `advisory` (no approval footer; read-only unless `editable`). `status`: `draft` \| `approved` \| `running` \| `complete` \| `cancelled`. Step `status`: `pending` \| `running` \| `complete` \| `skipped` \| `error`. Controlled `steps`/`onStepsChange` (editing needs `onStepsChange`; `editable` defaults to contractual drafts): inline edit, add/remove, drag or keyboard reorder (grip: Space lift, arrows move, Esc cancel). `onApprove(steps)`, `onRegenerate`, `onCancel`, `approveLabel`; `open`/`defaultOpen`/`onOpenChange` | `Button`, `Textarea`, `ThoughtStepKind` type |
 | [button.tsx](src/components/xds/button.tsx) | `Button`, `buttonVariants` | `variant`: `primary` (default), `outline`, `secondary`, `tertiary`, `destructive`, `link`. `size`: `default`, `xs`, `sm`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg` | `@base-ui/react/button`, CVA |
+| [capability-intro.tsx](src/components/xds/capability-intro.tsx) | `CapabilityIntro`, types `CapabilityIntroProps`, `CapabilityItem`, `CapabilityIntroStartersLayout` | Empty-state intro: renders title, capabilities/starters, then the `children` composer (`InitialCta`, which owns the one-line `disclaimer`). Capabilities are `{ id, title, description?, icon?, starters? }`, capped at 3 and shown as a condensed 3-column grid (`sm` and up). `startersLayout`: `flat` (default; one `Suggestions` row, falls back to all capability starters) \| `grouped` (tile per capability with its own starters). `onSelectStarter(prompt)`, `disabled`; labels `capabilitiesLabel`, `startersLabel` | `Suggestions` |
 | [card.tsx](src/components/xds/card.tsx) | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter` | `Card size`: `default` \| `sm` (drives `--card-spacing`) | Plain `div`s |
 | [citations.tsx](src/components/xds/citations.tsx) | `Citations`, `CitationReference`, types `CitationItem`, `CitationsProps`, `CitationReferenceProps` | `Citations items={CitationItem[]}` wraps content; `<CitationReference citationId="…" />` renders numbered inline link to the reference list. `CitationItem = { id, title, href, source?, locator? }` | React Context, `useId`, `getSafeHref` |
 | [dialog.tsx](src/components/xds/dialog.tsx) | `Dialog`, `DialogTrigger`, `DialogPortal`, `DialogOverlay`, `DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, `DialogDescription` | Centered modal (`max-w-lg`). `DialogContent showCloseButton` (default `true`, tertiary `icon-sm` button) | `@base-ui/react/dialog` (portal + blurred backdrop), `Button` |
@@ -89,6 +91,7 @@ Internal dependency graph:
 
 ```mermaid
 graph LR
+  CapabilityIntro --> Suggestions
   InitialCta --> Button
   InitialCta --> Select
   InitialCta --> Textarea
@@ -131,8 +134,8 @@ graph LR
 - Sidebar items are **auto-generated** from `import.meta.glob("./components/xds/*.tsx")`. Every file in `xds/` appears; the id is the filename (e.g. `initial-cta`).
 - Items are grouped into collapsible `<details>` sections (`componentGroups`):
   - **General**: everything not listed in `conversationalAiIds`.
-  - **Conversational AI**: ids in `conversationalAiIds` (`action-plan`, `citations`, `initial-cta`, `stream-of-thought`, `suggestions`).
-  - **Example**: a hard-coded `chatbot` item that renders `ChatbotExample` in a tall section with no code panel.
+  - **Conversational AI**: ids in `conversationalAiIds` (`action-plan`, `capability-intro`, `citations`, `initial-cta`, `stream-of-thought`, `suggestions`).
+  - **Example**: hard-coded items rendered from the `examplePages` record (`{ description, render }`) in a tall section with no code panel: `chatbot` → `ChatbotExample`, `assistant-home` → `AssistantHomeExample`.
 - Content for each component comes from the `componentExamples` record, keyed by that id: `{ description, code, preview }`. `code` may be a string or a function of the preview props.
 - Missing entries render a "Add a preview…" placeholder.
 - No router: selection is local state, defaulting to `card`. Hash URLs like `#citation-<instanceId>-<citationId>` are just in-page citation anchors.
@@ -185,6 +188,7 @@ graph LR
 - **Tokens live in `/styles`, not `/src`.**
 - **Edit `xds/`, not `ui/`.** `ui/button.tsx` is only a shim.
 - `cn` is the `cn` npm package, not a local `clsx` + `tailwind-merge` helper.
+- **Prompt inputs always use `InitialCta`.** Any component, organism, preview, or example that accepts a user prompt must use `InitialCta`; don't build a separate text input or textarea for prompts.
 - Components are controlled-friendly. For example, `InitialCta` requires `value` and `onValueChange`.
 - `StreamOfThought` durations are in seconds.
 - `dialog.tsx` has no XDS header comment yet; the other component files do.

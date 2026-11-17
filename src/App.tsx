@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, FileText, Lightbulb, PenLine } from "lucide-react"
 
 import {
   ActionPlan,
@@ -9,6 +9,11 @@ import {
   type ActionPlanStepStatus,
 } from "@/components/xds/action-plan"
 import { Button } from "@/components/xds/button"
+import {
+  CapabilityIntro,
+  type CapabilityIntroStartersLayout,
+  type CapabilityItem,
+} from "@/components/xds/capability-intro"
 import {
   Card,
   CardContent,
@@ -58,6 +63,7 @@ import {
   SelectValue,
 } from "@/components/xds/select"
 import { Textarea } from "@/components/xds/textarea"
+import { AssistantHomeExample } from "@/examples/assistant-home-example"
 import { ChatbotExample } from "@/examples/chatbot-example"
 import {
   StreamOfThought,
@@ -290,6 +296,85 @@ function SuggestionsPreview() {
           onSelect={setPrompt}
         />
       </div>
+    </div>
+  )
+}
+
+const previewCapabilities: CapabilityItem[] = [
+  {
+    id: "summarize",
+    title: "Summarize documents",
+    description: "Pull out key points, decisions, and open questions.",
+    icon: <FileText />,
+    starters: [starterSuggestions[0]],
+  },
+  {
+    id: "draft",
+    title: "Draft content",
+    description: "Write outlines, emails, and first drafts.",
+    icon: <PenLine />,
+    starters: [starterSuggestions[1]],
+  },
+  {
+    id: "explain",
+    title: "Explain concepts",
+    description: "Get plain-language explanations with examples.",
+    icon: <Lightbulb />,
+    starters: [starterSuggestions[2]],
+  },
+]
+
+function CapabilityIntroPreview() {
+  const [prompt, setPrompt] = useState("")
+  const [layout, setLayout] = useState<CapabilityIntroStartersLayout>("flat")
+  const [feedback, setFeedback] = useState("")
+
+  return (
+    <div className="w-full max-w-3xl space-y-6">
+      <div
+        aria-label="Starters layout"
+        className="flex gap-2"
+        role="group"
+      >
+        {(["flat", "grouped"] as const).map((option) => (
+          <Button
+            key={option}
+            aria-pressed={layout === option}
+            size="sm"
+            type="button"
+            variant={layout === option ? "primary" : "outline"}
+            onClick={() => setLayout(option)}
+          >
+            {option === "flat" ? "Flat starters" : "Grouped starters"}
+          </Button>
+        ))}
+      </div>
+      <CapabilityIntro
+        title="How can I help today?"
+        description="I can help you find, write, and explain information for your work."
+        capabilities={previewCapabilities}
+        startersLayout={layout}
+        onSelectStarter={setPrompt}
+      >
+        <div className="space-y-2">
+          <InitialCta
+            variant="chat"
+            title="Ask a question"
+            placeholder="Choose a starter or write your own..."
+            disclaimer="AI can make mistakes. Verify important information before relying on it."
+            value={prompt}
+            onValueChange={setPrompt}
+            onSubmit={({ prompt: submittedPrompt }) =>
+              setFeedback(`Ready to submit: ${submittedPrompt}`)
+            }
+          />
+          {feedback && (
+            <p className="text-sm text-muted-foreground" role="status">
+              {feedback}
+            </p>
+          )}
+        </div>
+      </CapabilityIntro>
     </div>
   )
 }
@@ -864,6 +949,37 @@ const showLabel = true
 </div>`,
     preview: () => <SuggestionsPreview />,
   },
+  "capability-intro": {
+    description:
+      "An empty state that sets expectations: what the assistant can do, what it can't, and where to start.",
+    code: `const capabilities: CapabilityItem[] = [
+  {
+    id: "summarize",
+    title: "Summarize documents",
+    description: "Pull out key points, decisions, and open questions.",
+    icon: <FileText />,
+    starters: [{ label: "Summarize a document", prompt: "Summarize..." }],
+  },
+]
+
+<CapabilityIntro
+  title="How can I help today?"
+  description="I can help you find, write, and explain information."
+  capabilities={capabilities}
+  startersLayout="flat" // or "grouped"
+  onSelectStarter={setPrompt}
+>
+  <InitialCta
+    variant="chat"
+    title="Ask a question"
+    disclaimer="AI can make mistakes. Verify important information before relying on it."
+    value={prompt}
+    onValueChange={setPrompt}
+    onSubmit={handleSubmit}
+  />
+</CapabilityIntro>`,
+    preview: () => <CapabilityIntroPreview />,
+  },
   "stream-of-thought": {
     description:
       "A visible trace of how the AI moves from request to answer: steps, tool calls, and evidence.",
@@ -932,6 +1048,7 @@ const componentItems: NavItem[] = Object.keys(
 
 const conversationalAiIds = new Set([
   "action-plan",
+  "capability-intro",
   "citations",
   "initial-cta",
   "stream-of-thought",
@@ -949,14 +1066,30 @@ const componentGroups: { name: string; items: NavItem[] }[] = [
   },
   {
     name: "Example",
-    items: [{ id: "chatbot", name: "Chatbot" }],
+    items: [
+      { id: "chatbot", name: "Chatbot" },
+      { id: "assistant-home", name: "Assistant home" },
+    ],
   },
 ]
 
 const navItems = componentGroups.flatMap((group) => group.items)
 
-const chatbotDescription =
-  "A working chat demo that combines General and Conversational AI components. Send any prompt to see the assistant think and answer with sources, with approval available in Settings."
+const examplePages: Record<
+  string,
+  { description: string; render: () => ReactNode }
+> = {
+  chatbot: {
+    description:
+      "A working chat demo that combines General and Conversational AI components. Send any prompt to see the assistant think and answer with sources, with approval available in Settings.",
+    render: () => <ChatbotExample />,
+  },
+  "assistant-home": {
+    description:
+      "An assistant landing page built with Capability Intro: what the assistant can do, its limits, and grouped starter prompts.",
+    render: () => <AssistantHomeExample />,
+  },
+}
 
 export function App() {
   const [activeComponentId, setActiveComponentId] = useState<string | null>(null)
@@ -965,7 +1098,9 @@ export function App() {
   const [showSuggestionsLabel, setShowSuggestionsLabel] = useState(true)
   const activeComponent = navItems.find((item) => item.id === activeComponentId)
   const isIntroduction = activeComponentId === null
-  const isChatbot = activeComponentId === "chatbot"
+  const examplePage = activeComponentId
+    ? examplePages[activeComponentId]
+    : undefined
   const example = activeComponent?.example
   const exampleCode =
     typeof example?.code === "function"
@@ -1094,18 +1229,18 @@ export function App() {
                 {activeComponent?.name ?? "Components"}
               </h1>
               <p className="mt-5 max-w-4xl text-lg leading-relaxed text-muted-foreground">
-                {isChatbot
-                  ? chatbotDescription
+                {examplePage
+                  ? examplePage.description
                   : example?.description ?? "Preview the selected xDS component."}
               </p>
             </header>
 
-            {isChatbot ? (
+            {examplePage ? (
           <section
-            aria-label="Chatbot example"
+            aria-label={`${activeComponent?.name} example`}
             className="mt-10 flex h-[min(56rem,calc(100svh-6rem))] min-h-[36rem] flex-col border border-border"
           >
-            <ChatbotExample />
+            {examplePage.render()}
           </section>
         ) : (
               <section
