@@ -25,7 +25,7 @@ In the answer
 
 Answer sections: Lightweight structure for summaries, details, caveats, and next steps. It would standardize long answers without forcing a rigid layout.
 
-Confidence and limitation notice: A small, consistent way to mark uncertainty, stale data, or missing permissions. Present it as a factual limitation rather than a vague confidence score.
+[Done] Confidence and limitation notice: A small, consistent way to mark uncertainty, stale data, or missing permissions. Present it as a factual limitation rather than a vague confidence score.
 
 Response variants: Lets users compare multiple drafts or switch between regenerated versions. This is useful for writing, but less universal than the other answer patterns.
 
@@ -37,6 +37,6 @@ Saved outcome: A quick confirmation when an answer is saved, exported, or added 
 
 Trust and control
 
-Privacy notice: Inline disclosure for data use, retention, or external sharing. InitialCta has a disclaimer, but a richer version would help with policy-specific contexts.
+[Done] Privacy notice: Inline disclosure for data use, retention, or external sharing. InitialCta has a disclaimer, but a richer version would help with policy-specific contexts.
 
 Permission request: Explains why the assistant needs access, what it will access, and how to continue without granting access.

@@ -67,6 +67,12 @@ import {
   SelectValue,
 } from "@/components/xds/select"
 import { Textarea } from "@/components/xds/textarea"
+import { LimitationNotice } from "@/components/xds/limitation-notice"
+import {
+  PrivacyNotice,
+  type PrivacyNoticeItem,
+  type PrivacyNoticeVariant,
+} from "@/components/xds/privacy-notice"
 import {
   ToolResult,
   type ToolResultStatus,
@@ -1079,6 +1085,163 @@ function ConfirmationPromptPreview() {
   )
 }
 
+function LimitationNoticePreview() {
+  const [accessRequested, setAccessRequested] = useState(false)
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          type="button"
+          variant="outline"
+          onClick={() => setAccessRequested(false)}
+        >
+          Restart demo
+        </Button>
+      </div>
+      <p className="text-sm leading-relaxed">
+        Weekly active users grew 18% in Q3, and three teams moved from pilot to
+        rollout. Support tickets about the assistant fell by a third after the
+        new onboarding guide was published.
+      </p>
+      <div className="flex flex-col gap-2">
+        <LimitationNotice
+          kind="stale"
+          title="Usage figures are from the analytics export of 30 Sep 2026."
+        />
+        <LimitationNotice
+          actionLabel={accessRequested ? undefined : "Request access"}
+          kind="permission"
+          title={
+            accessRequested
+              ? "Access to Finance SharePoint requested. Cost data will be included once it's granted."
+              : "I couldn't access Finance SharePoint, so cost data isn't included."
+          }
+          onAction={() => setAccessRequested(true)}
+        />
+        <LimitationNotice
+          kind="uncertain"
+          title="Sources disagree on when the third team moved to rollout (August or September)."
+        />
+        <LimitationNotice
+          kind="partial"
+          title="Based on 3 of 5 team reports."
+        >
+          Two reports were password-protected PDFs and couldn't be read:
+          Marketing Q3 review and Legal AI usage log.
+        </LimitationNotice>
+      </div>
+    </div>
+  )
+}
+
+const privacyItems: PrivacyNoticeItem[] = [
+  {
+    topic: "use",
+    description:
+      "Your prompts and files are used only to answer your request. They aren't used to train AI models.",
+  },
+  {
+    topic: "retention",
+    description:
+      "Chats are kept for 30 days, then deleted. You can delete a chat at any time.",
+  },
+  {
+    topic: "sharing",
+    description:
+      "Data stays within the company tenant. Web search sends only your search query to an external provider.",
+  },
+]
+
+function PrivacyNoticePreview() {
+  const [variant, setVariant] = useState<PrivacyNoticeVariant>("composer")
+  const [prompt, setPrompt] = useState("")
+  const [feedback, setFeedback] = useState("")
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-6">
+      <div aria-label="Placement" className="flex gap-2" role="group">
+        {(
+          [
+            { value: "composer", label: "Composer" },
+            { value: "inline", label: "Inline" },
+          ] as const
+        ).map((option) => (
+          <Button
+            key={option.value}
+            aria-pressed={variant === option.value}
+            size="sm"
+            type="button"
+            variant={variant === option.value ? "primary" : "outline"}
+            onClick={() => setVariant(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+      {variant === "composer" ? (
+        <div className="space-y-2">
+          <div>
+            <InitialCta
+              variant="chat"
+              title="Ask a question"
+              placeholder="Ask a question..."
+              disclaimer=""
+              submitLabel="Send"
+              value={prompt}
+              onValueChange={setPrompt}
+              onSubmit={({ prompt: submitted }) => {
+                setFeedback(`Ready to send: "${submitted}"`)
+                setPrompt("")
+              }}
+            />
+            <PrivacyNotice
+              items={privacyItems}
+              policyHref="#privacy-policy"
+              title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+            />
+          </div>
+          {feedback && (
+            <p className="text-sm text-muted-foreground" role="status">
+              {feedback}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+            What's the latest news on EU AI Act enforcement?
+          </p>
+          <PrivacyNotice
+            variant="inline"
+            items={[
+              {
+                topic: "sharing",
+                description:
+                  "Only the search query was sent to the web search provider. Your files and chat history stayed in the company tenant.",
+              },
+              {
+                topic: "retention",
+                description:
+                  "The provider may keep search queries under its own retention policy.",
+              },
+            ]}
+            policyHref="#privacy-policy"
+            title="Your search query was sent to an external web search provider."
+          />
+          <p className="text-sm leading-relaxed">
+            Placeholder answer: the first obligations under the EU AI Act now
+            apply, and national authorities are setting up their enforcement
+            teams. Most guidance so far focuses on prohibited practices and AI
+            literacy.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const componentExamples: Record<string, ComponentExample> = {
   button: {
     description: "A control that triggers an action.",
@@ -1367,6 +1530,55 @@ const showLabel = true
 </ConfirmationPrompt>`,
     preview: () => <ConfirmationPromptPreview />,
   },
+  "limitation-notice": {
+    description:
+      "A quiet, factual note about what an answer couldn't cover, such as stale data, missing access, conflicting sources, or incomplete coverage.",
+    code: `<LimitationNotice
+  kind="stale" // stale | permission | uncertain | partial
+  title="Usage figures are from the analytics export of 30 Sep 2026."
+/>
+
+<LimitationNotice
+  kind="permission"
+  title="I couldn't access Finance SharePoint, so cost data isn't included."
+  actionLabel="Request access"
+  onAction={requestAccess}
+/>
+
+<LimitationNotice kind="partial" title="Based on 3 of 5 team reports.">
+  {/* Optional detail, shown behind a "Details" toggle */}
+  Two reports were password-protected PDFs and couldn't be read.
+</LimitationNotice>`,
+    preview: () => <LimitationNoticePreview />,
+  },
+  "privacy-notice": {
+    description:
+      "An inline disclosure of how data is used, how long it's kept, and who it's shared with, under the composer or at the moment data leaves the organization.",
+    code: `const items: PrivacyNoticeItem[] = [
+  { topic: "use", description: "Your prompts aren't used to train AI models." },
+  { topic: "retention", description: "Chats are kept for 30 days, then deleted." },
+  { topic: "sharing", description: "Data stays within the company tenant." },
+]
+
+{/* Composer: replaces the InitialCta disclaimer */}
+<div>
+  <InitialCta variant="chat" disclaimer="" value={prompt} onValueChange={setPrompt} onSubmit={send} />
+  <PrivacyNotice
+    variant="composer"
+    title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+    items={items}
+    policyHref="/privacy"
+  />
+</div>
+
+{/* Inline: in the turn where data leaves the organization */}
+<PrivacyNotice
+  variant="inline"
+  title="Your search query was sent to an external web search provider."
+  items={[{ topic: "sharing", description: "Only the search query was sent." }]}
+/>`,
+    preview: () => <PrivacyNoticePreview />,
+  },
   "action-plan": {
     description:
       "The steps the AI intends to take, shown before it runs so people can review, edit, and approve them.",
@@ -1412,6 +1624,8 @@ const conversationalAiIds = new Set([
   "citations",
   "confirmation-prompt",
   "initial-cta",
+  "limitation-notice",
+  "privacy-notice",
   "response-status",
   "stream-of-thought",
   "suggestions",

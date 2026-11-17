@@ -34,6 +34,14 @@ import {
   InitialCta,
   isSupportedInitialCtaAttachment,
 } from "@/components/xds/initial-cta"
+import {
+  LimitationNotice,
+  type LimitationKind,
+} from "@/components/xds/limitation-notice"
+import {
+  PrivacyNotice,
+  type PrivacyNoticeItem,
+} from "@/components/xds/privacy-notice"
 import { ResponseStatus } from "@/components/xds/response-status"
 import {
   Sheet,
@@ -56,10 +64,19 @@ import {
 } from "@/components/xds/suggestions"
 type AnswerSegment = { text: string; citationId?: string }
 
+type AnswerLimitation = {
+  id: string
+  kind: LimitationKind
+  title: string
+  detail?: string
+  requestAccess?: { label: string; requestedTitle: string }
+}
+
 type CannedResponse = {
   sources: CitationItem[]
   paragraphs: AnswerSegment[][]
   followUps: SuggestionItem[]
+  limitations?: AnswerLimitation[]
 }
 
 type LaidOutSegment = AnswerSegment & {
@@ -87,6 +104,8 @@ type Turn = {
   approved: boolean
   stopped: boolean
   saveUndone: boolean
+  accessRequested: boolean
+  externalSearch: boolean
   wordCount: number
   feedback: "like" | "dislike" | null
   feedbackText: string
@@ -112,6 +131,28 @@ const starterSuggestions: SuggestionItem[] = [
   {
     label: "Email the summary to my team",
     prompt: "Summarize the key risks of generative AI and email the summary to my team.",
+  },
+  {
+    label: "Search the web for AI news",
+    prompt: "Search the web for the latest news on generative AI regulation.",
+  },
+]
+
+const privacyItems: PrivacyNoticeItem[] = [
+  {
+    topic: "use",
+    description:
+      "Your prompts and files are used only to answer your request. They aren't used to train AI models.",
+  },
+  {
+    topic: "retention",
+    description:
+      "Chats are kept for 30 days, then deleted. Starting a new chat doesn't delete earlier ones.",
+  },
+  {
+    topic: "sharing",
+    description:
+      "Data stays within the company tenant. Web search sends only your search query to an external provider.",
   },
 ]
 
@@ -163,6 +204,13 @@ const cannedResponses: CannedResponse[] = [
       { label: "Turn this into a checklist", prompt: "Turn this summary into a checklist." },
       { label: "Which risks matter most?", prompt: "Which of these risks matter most for a pilot?" },
     ],
+    limitations: [
+      {
+        id: "nist-date",
+        kind: "stale",
+        title: "Based on NIST guidance published up to July 2024. Later updates aren't included.",
+      },
+    ],
   },
   {
     sources: [nistFramework, wcag],
@@ -187,6 +235,18 @@ const cannedResponses: CannedResponse[] = [
       { label: "Add a timeline", prompt: "Add a rough timeline to this rollout plan." },
       { label: "Who should be involved?", prompt: "Who should be involved in each phase?" },
     ],
+    limitations: [
+      {
+        id: "pilot-site",
+        kind: "permission",
+        title: "I couldn't access the AI Pilot SharePoint site, so team-specific dates aren't included.",
+        requestAccess: {
+          label: "Request access",
+          requestedTitle:
+            "Access to the AI Pilot SharePoint site requested. Team-specific dates will be included once it's granted.",
+        },
+      },
+    ],
   },
   {
     sources: [wcag, nistGenAi],
@@ -207,6 +267,15 @@ const cannedResponses: CannedResponse[] = [
     followUps: [
       { label: "Show an example", prompt: "Show an example of an accessible chat message." },
       { label: "How do I test this?", prompt: "How do I test a chat interface for accessibility?" },
+    ],
+    limitations: [
+      {
+        id: "wcag-scope",
+        kind: "partial",
+        title: "Based on the WCAG 2.2 Recommendation only.",
+        detail:
+          "The supporting Understanding and Techniques documents weren't read, so implementation advice may be incomplete.",
+      },
     ],
   },
 ]
@@ -325,6 +394,8 @@ function createTurn(
     approved: false,
     stopped: false,
     saveUndone: false,
+    accessRequested: false,
+    externalSearch: /\b(web|internet|online)\b/i.test(prompt),
     wordCount: 0,
     feedback: null,
     feedbackText: "",
@@ -604,36 +675,44 @@ export function ChatbotExample() {
   }
 
   const composer = (
-    <InitialCta
-      variant="chat"
-      title="Message the assistant"
-      placeholder={
-        awaitingConfirmation
-          ? "Confirm or cancel the pending action..."
-          : isRunning
-            ? "Waiting for the response..."
-            : "Ask a question..."
-      }
-      modes={[
-        { value: "assistant", label: "Assistant" },
-        { value: "novartis-chat", label: "Novartis Chat" },
-      ]}
-      mode={mode}
-      onModeChange={setMode}
-      onAttach={() => fileInputRef.current?.click()}
-      attachments={attachments}
-      onAttachmentsChange={setAttachments}
-      attachmentError={attachmentError}
-      onAttachmentErrorDismiss={() => setAttachmentError("")}
-      onVoiceInput={() => setComposerNotice("Voice input is not connected in this demo.")}
-      submitLabel="Send"
-      disabled={isRunning}
-      value={prompt}
-      onValueChange={setPrompt}
-      onSubmit={({ prompt: submitted, mode: submittedMode, attachments: submittedAttachments }) =>
-        send(submitted, submittedMode, submittedAttachments)
-      }
-    />
+    <div>
+      <InitialCta
+        variant="chat"
+        title="Message the assistant"
+        placeholder={
+          awaitingConfirmation
+            ? "Confirm or cancel the pending action..."
+            : isRunning
+              ? "Waiting for the response..."
+              : "Ask a question..."
+        }
+        modes={[
+          { value: "assistant", label: "Assistant" },
+          { value: "novartis-chat", label: "Novartis Chat" },
+        ]}
+        mode={mode}
+        onModeChange={setMode}
+        onAttach={() => fileInputRef.current?.click()}
+        attachments={attachments}
+        onAttachmentsChange={setAttachments}
+        attachmentError={attachmentError}
+        onAttachmentErrorDismiss={() => setAttachmentError("")}
+        onVoiceInput={() => setComposerNotice("Voice input is not connected in this demo.")}
+        disclaimer=""
+        submitLabel="Send"
+        disabled={isRunning}
+        value={prompt}
+        onValueChange={setPrompt}
+        onSubmit={({ prompt: submitted, mode: submittedMode, attachments: submittedAttachments }) =>
+          send(submitted, submittedMode, submittedAttachments)
+        }
+      />
+      <PrivacyNotice
+        items={privacyItems}
+        policyHref="#privacy-policy"
+        title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+      />
+    </div>
   )
 
   return (
@@ -793,6 +872,26 @@ export function ChatbotExample() {
                         </Button>
                       </div>
                     </div>
+
+                    {turn.externalSearch && turn.phase > 0 && (
+                      <PrivacyNotice
+                        variant="inline"
+                        items={[
+                          {
+                            topic: "sharing",
+                            description:
+                              "Only the search query was sent to the web search provider. Your files and chat history stayed in the company tenant.",
+                          },
+                          {
+                            topic: "retention",
+                            description:
+                              "The provider may keep search queries under its own retention policy.",
+                          },
+                        ]}
+                        policyHref="#privacy-policy"
+                        title="Your search query was sent to an external web search provider."
+                      />
+                    )}
 
                     {turn.showReasoning ||
                     status === "waiting" ||
@@ -960,6 +1059,35 @@ export function ChatbotExample() {
                             wordCount={turn.wordCount}
                           />
                         </Sources>
+
+                        {answerDone && response.limitations && (
+                          <div className="flex flex-col gap-2">
+                            {response.limitations.map((limitation) => {
+                              const requested =
+                                limitation.requestAccess && turn.accessRequested
+
+                              return (
+                                <LimitationNotice
+                                  key={limitation.id}
+                                  actionLabel={
+                                    requested ? undefined : limitation.requestAccess?.label
+                                  }
+                                  kind={limitation.kind}
+                                  title={
+                                    requested
+                                      ? limitation.requestAccess?.requestedTitle
+                                      : limitation.title
+                                  }
+                                  onAction={() =>
+                                    updateTurn(turn.id, (t) => ({ ...t, accessRequested: true }))
+                                  }
+                                >
+                                  {limitation.detail}
+                                </LimitationNotice>
+                              )
+                            })}
+                          </div>
+                        )}
 
                         {answerDone && turn.confirmation && (
                           <ConfirmationPrompt
