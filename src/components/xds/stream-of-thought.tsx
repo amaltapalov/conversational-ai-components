@@ -6,19 +6,21 @@ import {
   Circle,
   CircleAlert,
   CirclePause,
-  Code,
-  FileText,
   Loader2,
   RotateCcw,
-  Search,
   Square,
-  Wrench,
   X,
 } from "lucide-react"
 
 import { cn } from "cn"
 import { Button } from "@/components/xds/button"
 import type { CitationItem } from "@/components/xds/citations"
+import {
+  formatDuration,
+  streamStatusLabel,
+  thoughtKindIcon as kindIcon,
+  thoughtKindLabel as kindLabel,
+} from "@/lib/thought-vocabulary"
 import { getSafeHref } from "@/lib/utils"
 
 /**
@@ -92,29 +94,6 @@ const stepStatusLabel: Record<ThoughtStepStatus, string> = {
   complete: "Completed",
 }
 
-const kindIcon: Record<ThoughtStepKind, typeof Brain> = {
-  reasoning: Brain,
-  search: Search,
-  read: FileText,
-  tool: Wrench,
-  code: Code,
-}
-
-const kindLabel: Record<ThoughtStepKind, string> = {
-  reasoning: "Reasoning",
-  search: "Search",
-  read: "Read",
-  tool: "Tool call",
-  code: "Code",
-}
-
-function formatDuration(seconds: number) {
-  if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`
-  const minutes = Math.floor(seconds / 60)
-  const rest = Math.round(seconds % 60)
-  return rest ? `${minutes}m ${rest}s` : `${minutes}m`
-}
-
 function StepStatusIcon({ status }: { status: ThoughtStepStatus }) {
   const base = "size-4 shrink-0"
 
@@ -143,20 +122,10 @@ function getHeaderLabel(
   status: StreamOfThoughtStatus,
   duration: number | undefined
 ) {
-  switch (status) {
-    case "thinking":
-      return "Thinking…"
-    case "waiting":
-      return "Waiting for approval"
-    case "error":
-      return "Something went wrong"
-    case "stopped":
-      return "Stopped"
-    default:
-      return duration !== undefined
-        ? `Thought for ${formatDuration(duration)}`
-        : "Finished thinking"
-  }
+  if (status !== "complete") return streamStatusLabel[status]
+  return duration !== undefined
+    ? `Thought for ${formatDuration(duration)}`
+    : "Finished thinking"
 }
 
 function StreamOfThoughtDetail({

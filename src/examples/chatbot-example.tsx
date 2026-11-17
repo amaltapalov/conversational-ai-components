@@ -26,10 +26,15 @@ import {
 } from "@/components/xds/dialog"
 import { Attachments } from "@/components/xds/attachments"
 import {
+  ConfirmationPrompt,
+  type ConfirmationPromptStatus,
+} from "@/components/xds/confirmation-prompt"
+import {
   INITIAL_CTA_ATTACHMENT_ACCEPT,
   InitialCta,
   isSupportedInitialCtaAttachment,
 } from "@/components/xds/initial-cta"
+import { ResponseStatus } from "@/components/xds/response-status"
 import {
   Sheet,
   SheetContent,
@@ -44,6 +49,7 @@ import {
   type ThoughtStep,
 } from "@/components/xds/stream-of-thought"
 import { Textarea } from "@/components/xds/textarea"
+import { ToolResult } from "@/components/xds/tool-result"
 import {
   Suggestions,
   type SuggestionItem,
@@ -63,6 +69,7 @@ type LaidOutSegment = AnswerSegment & {
 }
 
 type Settings = {
+  showReasoning: boolean
   requireApproval: boolean
   simulateError: boolean
   streamAnswer: boolean
@@ -79,11 +86,14 @@ type Turn = {
   retried: boolean
   approved: boolean
   stopped: boolean
+  saveUndone: boolean
   wordCount: number
   feedback: "like" | "dislike" | null
   feedbackText: string
+  showReasoning: boolean
   requireApproval: boolean
   simulateError: boolean
+  confirmation: ConfirmationPromptStatus | null
 }
 
 const starterSuggestions: SuggestionItem[] = [
@@ -98,6 +108,10 @@ const starterSuggestions: SuggestionItem[] = [
   {
     label: "Explain accessibility basics",
     prompt: "Explain the basics of accessible design for chat interfaces.",
+  },
+  {
+    label: "Email the summary to my team",
+    prompt: "Summarize the key risks of generative AI and email the summary to my team.",
   },
 ]
 
@@ -297,22 +311,27 @@ function createTurn(
   settings: Settings,
   attachments: File[] = []
 ): Turn {
+  const needsConfirmation = /\b(email|send)\b/i.test(prompt)
+
   return {
     id,
     prompt,
     attachments,
     mode,
-    responseIndex: id % cannedResponses.length,
+    responseIndex: needsConfirmation ? 0 : id % cannedResponses.length,
     phase: 0,
     failed: false,
     retried: false,
     approved: false,
     stopped: false,
+    saveUndone: false,
     wordCount: 0,
     feedback: null,
     feedbackText: "",
+    showReasoning: settings.showReasoning,
     requireApproval: settings.requireApproval,
     simulateError: settings.simulateError,
+    confirmation: needsConfirmation ? "pending" : null,
   }
 }
 
@@ -378,6 +397,11 @@ function SettingsSheet({
   onChange: (settings: Settings) => void
 }) {
   const options: { key: keyof Settings; label: string; description: string }[] = [
+    {
+      key: "showReasoning",
+      label: "Show reasoning",
+      description: "Show every step, or only a short status while the assistant works.",
+    },
     {
       key: "requireApproval",
       label: "Require approval",
@@ -446,6 +470,7 @@ export function ChatbotExample() {
   const [feedbackTurnId, setFeedbackTurnId] = useState<number | null>(null)
   const [feedbackText, setFeedbackText] = useState("")
   const [settings, setSettings] = useState<Settings>({
+    showReasoning: true,
     requireApproval: false,
     simulateError: false,
     streamAnswer: true,
@@ -461,11 +486,14 @@ export function ChatbotExample() {
   const liveTotalWords = live ? laidOutResponses[live.responseIndex].total : 0
   const isAnswering =
     liveStatus === "complete" && (live?.wordCount ?? 0) < liveTotalWords
+  const awaitingConfirmation =
+    live?.confirmation === "pending" || live?.confirmation === "confirming"
   const isRunning =
     liveStatus === "thinking" ||
     liveStatus === "waiting" ||
     liveStatus === "error" ||
-    isAnswering
+    isAnswering ||
+    awaitingConfirmation
   const instantAnswer = !settings.streamAnswer || reducedMotion
 
   useEffect(() => {
@@ -490,10 +518,20 @@ export function ChatbotExample() {
             wordCount: instantAnswer ? liveTotalWords : turn.wordCount + 2,
           }))
         )
-      }, 40)
+      }, live?.wordCount === 0 ? 700 : 40)
       return () => window.clearTimeout(timer)
     }
   }, [live, liveStatus, isAnswering, instantAnswer, liveTotalWords])
+
+  useEffect(() => {
+    if (live?.confirmation !== "confirming") return
+    const timer = window.setTimeout(() => {
+      setTurns((current) =>
+        updateLast(current, (turn) => ({ ...turn, confirmation: "confirmed" }))
+      )
+    }, 1200)
+    return () => window.clearTimeout(timer)
+  }, [live?.confirmation])
 
   useEffect(() => {
     const element = scrollRef.current
@@ -569,7 +607,13 @@ export function ChatbotExample() {
     <InitialCta
       variant="chat"
       title="Message the assistant"
-      placeholder={isRunning ? "Waiting for the response..." : "Ask a question..."}
+      placeholder={
+        awaitingConfirmation
+          ? "Confirm or cancel the pending action..."
+          : isRunning
+            ? "Waiting for the response..."
+            : "Ask a question..."
+      }
       modes={[
         { value: "assistant", label: "Assistant" },
         { value: "novartis-chat", label: "Novartis Chat" },
@@ -750,27 +794,87 @@ export function ChatbotExample() {
                       </div>
                     </div>
 
-                    <StreamOfThought
-                      duration={elapsed}
-                      status={status}
-                      steps={steps}
-                      onApprove={
-                        isLive ? () => updateLive((t) => ({ ...t, approved: true })) : undefined
-                      }
-                      onReject={
-                        isLive ? () => updateLive((t) => ({ ...t, stopped: true })) : undefined
-                      }
-                      onRetry={
-                        isLive
-                          ? () => updateLive((t) => ({ ...t, failed: false, retried: true }))
-                          : undefined
-                      }
-                      onStop={
-                        isLive ? () => updateLive((t) => ({ ...t, stopped: true })) : undefined
-                      }
-                    />
+                    {turn.showReasoning ||
+                    status === "waiting" ||
+                    status === "error" ? (
+                      <StreamOfThought
+                        duration={elapsed}
+                        status={status}
+                        steps={steps}
+                        onApprove={
+                          isLive ? () => updateLive((t) => ({ ...t, approved: true })) : undefined
+                        }
+                        onReject={
+                          isLive ? () => updateLive((t) => ({ ...t, stopped: true })) : undefined
+                        }
+                        onRetry={
+                          isLive
+                            ? () => updateLive((t) => ({ ...t, failed: false, retried: true }))
+                            : undefined
+                        }
+                        onStop={
+                          isLive ? () => updateLive((t) => ({ ...t, stopped: true })) : undefined
+                        }
+                      />
+                    ) : (
+                      <ResponseStatus
+                        activity={steps[turn.phase]?.kind}
+                        status={status}
+                        onStop={
+                          isLive ? () => updateLive((t) => ({ ...t, stopped: true })) : undefined
+                        }
+                      />
+                    )}
 
-                    {status === "complete" && (
+                    {(turn.phase > approvalStepIndex ||
+                      (turn.stopped && turn.phase === approvalStepIndex)) && (
+                      <ToolResult
+                        duration={turn.phase > approvalStepIndex ? 1 : undefined}
+                        status={
+                          turn.phase <= approvalStepIndex || turn.saveUndone
+                            ? "cancelled"
+                            : "success"
+                        }
+                        title={
+                          turn.phase <= approvalStepIndex
+                            ? "Notes not saved"
+                            : turn.saveUndone
+                              ? "Save undone"
+                              : "Saved notes to your workspace"
+                        }
+                        tool="Workspace · save"
+                        summary={
+                          turn.phase <= approvalStepIndex
+                            ? "The save was not approved"
+                            : turn.saveUndone
+                              ? "notes.md was removed"
+                              : "notes.md · 5 key points"
+                        }
+                        fields={[
+                          { label: "File", value: "notes.md" },
+                          { label: "Location", value: "Your workspace" },
+                        ]}
+                        detail={{
+                          language: "python",
+                          input: 'workspace.save("notes.md", notes)',
+                          output:
+                            turn.phase > approvalStepIndex
+                              ? '{ "saved": true, "points": 5 }'
+                              : undefined,
+                        }}
+                        onUndo={
+                          isLive
+                            ? () => updateLive((t) => ({ ...t, saveUndone: true }))
+                            : undefined
+                        }
+                      />
+                    )}
+
+                    {status === "complete" && turn.wordCount === 0 && (
+                      <ResponseStatus activity="drafting" />
+                    )}
+
+                    {status === "complete" && turn.wordCount > 0 && (
                       <div aria-busy={!answerDone} className="space-y-4">
                         <Sources
                           ariaLabel="Sources"
@@ -857,6 +961,36 @@ export function ChatbotExample() {
                           />
                         </Sources>
 
+                        {answerDone && turn.confirmation && (
+                          <ConfirmationPrompt
+                            confirmLabel="Send email"
+                            description="I'll send the summary above from your account."
+                            fields={[
+                              { label: "To", value: "Leadership team (12 people)" },
+                              { label: "Subject", value: "Generative AI risks: summary" },
+                            ]}
+                            status={turn.confirmation}
+                            title="Send summary to Leadership team"
+                            onCancel={() =>
+                              updateTurn(turn.id, (t) => ({ ...t, confirmation: "cancelled" }))
+                            }
+                            onConfirm={() =>
+                              updateTurn(turn.id, (t) => ({ ...t, confirmation: "confirming" }))
+                            }
+                            onEdit={() => editPrompt(turn)}
+                          />
+                        )}
+
+                        {turn.confirmation === "confirmed" && (
+                          <ToolResult
+                            duration={1}
+                            status="success"
+                            title="Sent summary to Leadership team"
+                            tool="Mail · send"
+                            summary="Delivered to 12 people"
+                          />
+                        )}
+
                         {answerDone && (
                           <Dialog
                             open={feedbackTurnId === turn.id}
@@ -908,7 +1042,7 @@ export function ChatbotExample() {
                           </Dialog>
                         )}
 
-                        {answerDone && isLive && (
+                        {answerDone && isLive && !awaitingConfirmation && (
                           <Suggestions
                             ariaLabel="Follow-up suggestions"
                             items={response.followUps}

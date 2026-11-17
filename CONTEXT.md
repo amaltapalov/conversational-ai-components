@@ -16,7 +16,7 @@ Persistent context for developers and AI coding assistants working on **DS Core 
 
 | Area | Choice | Notes |
 |---|---|---|
-| Framework | React 19 + `react-dom` 19 | Client-only SPA, no RSC, no `"use client"` |
+| Framework | React 19 + `react-dom` 19 | Client-only SPA, no RSC. Registry files may keep `"use client"` (e.g. `dialog.tsx`); it's a no-op in Vite |
 | Build | Vite 8 + `@vitejs/plugin-react` | Alias `@` → `./src` ([vite.config.ts](vite.config.ts)) |
 | Language | TypeScript ~6, `strict`, `verbatimModuleSyntax` | Use `import type` for type-only imports |
 | Styling | Tailwind CSS v4 via `@tailwindcss/vite` | **No `tailwind.config.*`** — tokens live in CSS `@theme` blocks |
@@ -67,7 +67,9 @@ DS Core AI/
    │  ├─ xds/                 ← SOURCE OF TRUTH for all components
    │  ├─ ui/button.tsx        Re-export shim of xds/button (for shadcn-generated imports)
    │  └─ theme-provider.tsx   ThemeProvider + useTheme
-   └─ lib/utils.ts            cn re-export, getSafeHref()
+   └─ lib/
+      ├─ utils.ts            cn re-export, getSafeHref()
+      └─ thought-vocabulary.ts  Shared StreamOfThought/ResponseStatus kind icons + labels, status labels, formatDuration()
 ```
 
 ## 5. Component catalog (`src/components/xds/`)
@@ -75,17 +77,21 @@ DS Core AI/
 | File | Exports | Key API | Built on / depends on |
 |---|---|---|---|
 | [action-plan.tsx](src/components/xds/action-plan.tsx) | `ActionPlan`, types `ActionPlanStep`, `ActionPlanStepStatus`, `ActionPlanStatus`, `ActionPlanMode`, `ActionPlanProps` | `mode`: `contractual` (default, approval gate) \| `advisory` (no approval footer; read-only unless `editable`). `status`: `draft` \| `approved` \| `running` \| `complete` \| `cancelled`. Step `status`: `pending` \| `running` \| `complete` \| `skipped` \| `error`. Controlled `steps`/`onStepsChange` (editing needs `onStepsChange`; `editable` defaults to contractual drafts): inline edit, add/remove, drag or keyboard reorder (grip: Space lift, arrows move, Esc cancel). `onApprove(steps)`, `onRegenerate`, `onCancel`, `approveLabel`; `open`/`defaultOpen`/`onOpenChange` | `Button`, `Textarea`, `ThoughtStepKind` type |
+| [attachments.tsx](src/components/xds/attachments.tsx) | `Attachments` | `files: File[]`, `disabled`, `onRemove(index)` (shows a remove button per file). Renders nothing when `files` is empty. Image files get an object-URL thumbnail; PDF/Word/Excel get a colored type tile; shows name + size | `Button`. No XDS header yet |
 | [button.tsx](src/components/xds/button.tsx) | `Button`, `buttonVariants` | `variant`: `primary` (default), `outline`, `secondary`, `tertiary`, `destructive`, `link`. `size`: `default`, `xs`, `sm`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg` | `@base-ui/react/button`, CVA |
 | [capability-intro.tsx](src/components/xds/capability-intro.tsx) | `CapabilityIntro`, types `CapabilityIntroProps`, `CapabilityItem`, `CapabilityIntroStartersLayout` | Empty-state intro: renders title, capabilities/starters, then the `children` composer (`InitialCta`, which owns the one-line `disclaimer`). Capabilities are `{ id, title, description?, icon?, starters? }`, capped at 3 and shown as a condensed 3-column grid (`sm` and up). `startersLayout`: `flat` (default; one `Suggestions` row, falls back to all capability starters) \| `grouped` (tile per capability with its own starters). `onSelectStarter(prompt)`, `disabled`; labels `capabilitiesLabel`, `startersLabel` | `Suggestions` |
 | [card.tsx](src/components/xds/card.tsx) | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter` | `Card size`: `default` \| `sm` (drives `--card-spacing`) | Plain `div`s |
 | [citations.tsx](src/components/xds/citations.tsx) | `Citations`, `CitationReference`, types `CitationItem`, `CitationsProps`, `CitationReferenceProps` | `Citations items={CitationItem[]}` wraps content; `<CitationReference citationId="…" />` renders numbered inline link to the reference list. `CitationItem = { id, title, href, source?, locator? }` | React Context, `useId`, `getSafeHref` |
-| [dialog.tsx](src/components/xds/dialog.tsx) | `Dialog`, `DialogTrigger`, `DialogPortal`, `DialogOverlay`, `DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, `DialogDescription` | Centered modal (`max-w-lg`). `DialogContent showCloseButton` (default `true`, tertiary `icon-sm` button) | `@base-ui/react/dialog` (portal + blurred backdrop), `Button` |
+| [confirmation-prompt.tsx](src/components/xds/confirmation-prompt.tsx) | `ConfirmationPrompt`, types `ConfirmationPromptProps`, `ConfirmationPromptStatus`, `ConfirmationPromptIntent`, `ConfirmationPromptField` | Inline approval for **one** risky action (use `ActionPlan` for multi-step plans). `status`: `pending` (default) \| `confirming` \| `confirmed` \| `cancelled` \| `error`. `intent`: `default` \| `destructive` (destructive Confirm button + red accents). `title` (the action), `description?`, `icon?` (defaults to shield), `fields?` (`{ label, value }` as `<dl>`), `children` (scrollable preview, e.g. an email body), `irreversible?` (`true` → "This can't be undone.", or a custom node). `onConfirm`, `onCancel`, optional `onEdit`; `confirmLabel`, `cancelLabel`, `editLabel`, `errorMessage`. Buttons are enabled only in `pending`/`error`; the card stays in place after a decision with a status label in the header | `Button` |
+| [dialog.tsx](src/components/xds/dialog.tsx) | `Dialog`, `DialogTrigger`, `DialogPortal`, `DialogClose`, `DialogOverlay`, `DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, `DialogDescription` | Centered modal (`max-w-[calc(100%-2rem)]`, `sm:max-w-sm`, `p-4`). `DialogContent showCloseButton` (default `true`, tertiary `icon-sm` button). `DialogFooter showCloseButton` (default `false`) appends an outline "Close" button; the footer bleeds to the edges (`-mx-4 -mb-4`, `bg-muted/50`, `border-t`) | `@base-ui/react/dialog` (portal + blurred backdrop), `Button`. Synced with the `@xds` registry |
 | [initial-cta.tsx](src/components/xds/initial-cta.tsx) | `InitialCta`, types `InitialCtaProps`, `InitialCtaMode`, `InitialCtaTemplate`, `InitialCtaSubmitPayload`, `InitialCtaSuggestion` | `variant`: `standard` \| `chat`. Controlled `value`/`onValueChange`, `attachments`/`onAttachmentsChange`, `attachmentError`/`onAttachmentErrorDismiss`, `onSubmit({ prompt, attachments, mode?, templateId? })`, optional `modes`/`mode`, `templates`/`templateId`, `onAttach`, `onVoiceInput`, `disclaimer`, `disabled` | `Button`, `Select`, `Textarea`, `SuggestionItem` type |
+| [response-status.tsx](src/components/xds/response-status.tsx) | `ResponseStatus`, types `ResponseStatusProps`, `ResponseActivity` | Compact inline indicator for short waits, as an alternative to `StreamOfThought`. `status`: `StreamOfThoughtStatus` (default `thinking`; `complete` renders nothing). `activity`: `ThoughtStepKind` \| `drafting` (default `reasoning`) → "Thinking…", "Searching…", "Reading…", "Using tools…", "Running code…", "Drafting…". `label` overrides the text; `elapsed` (**seconds**); `onStop`/`stopLabel` (shown while thinking). No icons: a spinner while thinking, text only otherwise. Only the spinner + label sit in the `role="status"` region. No approve/retry actions: use `StreamOfThought` for those | `Button`, `lib/thought-vocabulary` |
 | [select.tsx](src/components/xds/select.tsx) | `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`, `SelectGroup`, `SelectLabel`, `SelectSeparator`, `SelectScrollUpButton`, `SelectScrollDownButton` | `SelectTrigger size`: `default` \| `sm`. `SelectContent` accepts `side`, `sideOffset`, `align`, `alignOffset`, `alignItemWithTrigger` | `@base-ui/react/select` (portal) |
 | [sheet.tsx](src/components/xds/sheet.tsx) | `Sheet`, `SheetTrigger`, `SheetClose`, `SheetContent`, `SheetHeader`, `SheetFooter`, `SheetTitle`, `SheetDescription` | `SheetContent side`: `top` \| `right` (default) \| `bottom` \| `left`; `showCloseButton` (default `true`) | `@base-ui/react/dialog` (portal + backdrop) |
 | [stream-of-thought.tsx](src/components/xds/stream-of-thought.tsx) | `StreamOfThought`, types `ThoughtStep`, `ThoughtStepStatus`, `ThoughtStepKind`, `ThoughtStepDetail`, `StreamOfThoughtStatus`, `StreamOfThoughtProps` | `status`: `thinking` \| `waiting` \| `complete` \| `error` \| `stopped`. Step `status`: `queued` \| `running` \| `waiting` \| `error` \| `retried` \| `complete`. Step `kind`: `reasoning` \| `search` \| `read` \| `tool` \| `code`. Callbacks `onStop`, `onApprove`, `onReject`, `onRetry`; `open`/`defaultOpen`/`onOpenChange`; durations in **seconds** | `Button`, `CitationItem` (step `sources`), `getSafeHref` |
 | [suggestions.tsx](src/components/xds/suggestions.tsx) | `Suggestions`, types `SuggestionItem`, `SuggestionsProps` | `items: { label, prompt }[]`, `onSelect(prompt)`, `disabled`. Renders nothing when `items` is empty | `Button` (`size="sm"`, `variant="secondary"`) |
 | [textarea.tsx](src/components/xds/textarea.tsx) | `Textarea` | Native `textarea` props; auto-grows via `field-sizing-content` | Plain `textarea` |
+| [tool-result.tsx](src/components/xds/tool-result.tsx) | `ToolResult`, types `ToolResultStatus`, `ToolResultField`, `ToolResultDetail`, `ToolResultProps` | One tool action and its outcome, separate from reasoning and the answer. `status`: `running` \| `success` \| `error` \| `cancelled`. `title` (what the assistant did), `tool?`, `icon?` (defaults to wrench), `summary?`, `duration?` (**seconds**). Expandable only when it has `fields` (`{ label, value }`, rendered as `<dl>`) or `detail` (`{ input?, output?, language? }`); `open`/`defaultOpen` (`false`)/`onOpenChange`. `onRetry` shows on `error`, `onUndo` on `success` (`retryLabel`, `undoLabel`) | `Button`, `formatDuration` (`lib/thought-vocabulary`) |
 
 Internal dependency graph:
 
@@ -101,10 +107,17 @@ graph LR
   StreamOfThought -. type .-> Citations
   Citations --> utils[lib/utils getSafeHref]
   StreamOfThought --> utils
+  StreamOfThought --> vocab[lib/thought-vocabulary]
+  ResponseStatus --> Button
+  ResponseStatus --> vocab
+  ResponseStatus -. type .-> StreamOfThought
+  Attachments --> Button
   ActionPlan --> Button
   ActionPlan --> Textarea
   ActionPlan -. type .-> StreamOfThought
   Dialog --> Button
+  ToolResult --> Button
+  ConfirmationPrompt --> Button
 ```
 
 ## 6. Design tokens ([styles/theme.css](styles/theme.css))
@@ -134,18 +147,20 @@ graph LR
 - Sidebar items are **auto-generated** from `import.meta.glob("./components/xds/*.tsx")`. Every file in `xds/` appears; the id is the filename (e.g. `initial-cta`).
 - Items are grouped into collapsible `<details>` sections (`componentGroups`):
   - **General**: everything not listed in `conversationalAiIds`.
-  - **Conversational AI**: ids in `conversationalAiIds` (`action-plan`, `capability-intro`, `citations`, `initial-cta`, `stream-of-thought`, `suggestions`).
+  - **Conversational AI**: ids in `conversationalAiIds` (`action-plan`, `capability-intro`, `citations`, `confirmation-prompt`, `initial-cta`, `response-status`, `stream-of-thought`, `suggestions`, `tool-result`).
   - **Example**: hard-coded items rendered from the `examplePages` record (`{ description, render }`) in a tall section with no code panel: `chatbot` → `ChatbotExample`, `assistant-home` → `AssistantHomeExample`.
 - Content for each component comes from the `componentExamples` record, keyed by that id: `{ description, code, preview }`. `code` may be a string or a function of the preview props.
 - Missing entries render a "Add a preview…" placeholder.
 - No router: selection is local state, defaulting to `card`. Hash URLs like `#citation-<instanceId>-<citationId>` are just in-page citation anchors.
-- Stateful demos live in `*Preview` functions. Examples: `StreamOfThoughtPreview` simulates a run with timed steps, an error step, and an approval step. `ActionPlanPreview` runs draft → approve → run, with a toggle between contractual and advisory (which runs immediately). `DialogPreview` shows a basic modal.
+- Stateful demos live in `*Preview` functions. Examples: `StreamOfThoughtPreview` simulates a run with timed steps, an error step, and an approval step. `ActionPlanPreview` runs draft → approve → run, with a toggle between contractual and advisory (which runs immediately). `DialogPreview` shows a basic modal. `ToolResultPreview` shows a save that completes and can be undone, a failed send that can be retried, and a non-expandable result. `ConfirmationPromptPreview` switches between a send-email and a destructive delete scenario, with a "Simulate failure" toggle.
 
 ### Chatbot example ([src/examples/chatbot-example.tsx](src/examples/chatbot-example.tsx))
 
 - Front-end only: replies are **canned responses** (`cannedResponses`) with sources, paragraphs that include citation ids, and follow-up suggestions. There is no API call.
 - Each `Turn` animates on timers: stream of thought, an optional simulated error + retry, an optional approval step, then a word-by-word answer.
-- Uses `InitialCta`, `Suggestions` (starters + follow-ups), `StreamOfThought`, `Citations`/`CitationReference`, `Sheet` (settings: `requireApproval`, `simulateError`, `streamAnswer`), `Dialog` + `Textarea` (feedback), and `Button`.
+- Uses `InitialCta`, `Suggestions` (starters + follow-ups), `StreamOfThought`, `ToolResult` (outcome of the "Save notes" step: saved with Undo, undone, or not saved after a rejection), `Citations`/`CitationReference`, `Sheet` (settings: `showReasoning`, `requireApproval`, `simulateError`, `streamAnswer`), `Dialog` + `Textarea` (feedback), and `Button`.
+- Prompts matching `/\b(email|send)\b/i` (e.g. the "Email the summary to my team" starter) end with a `ConfirmationPrompt` under the answer. The composer stays disabled until it's confirmed or cancelled; Edit returns the prompt to the composer, and a confirmed send shows a `ToolResult`.
+- `showReasoning` off swaps `StreamOfThought` for `ResponseStatus` (activity follows the current step's `kind`), falling back to `StreamOfThought` when waiting for approval or on error. Every answer shows `ResponseStatus activity="drafting"` for ~700ms before the first words.
 - Turn actions: new chat, edit prompt, copy prompt/answer (clipboard), like/dislike feedback.
 - Use it as the reference for how XDS components fit together in a real conversation layout.
 
@@ -180,6 +195,11 @@ graph LR
 5. Run `npm run lint && npm run build`.
 6. Update the catalog in this file.
 
+### Registry sync
+
+- To check for upstream updates, fetch `https://waw-usertown-dev-westeurope-01.azurewebsites.net/r/<name>.json` and compare `files[0].content` with the local file. Every item currently reports `meta.version` `0.1.0`, so compare the content, not the version.
+- Last check (2026-11-04): `dialog` refreshed from the registry. `button`, `card`, `textarea` matched exactly. `select` and `sheet` differ only by the registry's `"use client"` line (left out locally). The conversational AI components (`action-plan`, `attachments`, `capability-intro`, `citations`, `initial-cta`, `response-status`, `stream-of-thought`, `suggestions`) are not published in the registry; they're local only.
+
 ## 11. Gotchas for AI assistants
 
 - **base-ui, not Radix**: don't use `asChild`, `@radix-ui/*`, or Radix prop names. Check the base-ui API (`render`, `Popup`, `Positioner`, `Backdrop`, `data-open`/`data-closed`).
@@ -190,6 +210,6 @@ graph LR
 - `cn` is the `cn` npm package, not a local `clsx` + `tailwind-merge` helper.
 - **Prompt inputs always use `InitialCta`.** Any component, organism, preview, or example that accepts a user prompt must use `InitialCta`; don't build a separate text input or textarea for prompts.
 - Components are controlled-friendly. For example, `InitialCta` requires `value` and `onValueChange`.
-- `StreamOfThought` durations are in seconds.
-- `dialog.tsx` has no XDS header comment yet; the other component files do.
+- `StreamOfThought` and `ResponseStatus` durations are in seconds.
+- Shared step vocabulary (kind icons/labels, status labels, `formatDuration`) lives in `src/lib/thought-vocabulary.ts`. It's in `lib/` because any file in `xds/` would show up as a sidebar component.
 - Composite demos belong in `src/examples/`, not `src/components/xds/`, because every file in `xds/` automatically appears as a sidebar component.

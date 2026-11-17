@@ -15,11 +15,12 @@ Prompt rewrite preview: Shows a suggested clearer prompt that the user can accep
 
 During a response
 
-Response status: A lightweight indicator for short waits when a full StreamOfThought would be too much, such as "Searching" or "Drafting." It could share status vocabulary with StreamOfThought.
+[Done] Response status: A lightweight indicator for short waits when a full StreamOfThought would be too much, such as "Searching" or "Drafting." It could share status vocabulary with StreamOfThought.
 
-Tool result card: A compact summary of a tool action and its result, with expandable details. It would separate "what the assistant did" from both reasoning and the final answer.
+[Done] Tool result card: A compact summary of a tool action and its result, with expandable details. It would separate "what the assistant did" from both reasoning and the final answer.
 
-Confirmation prompt: A focused approval for one risky action, such as sending, deleting, or purchasing. ActionPlan is better for multi-step plans; this would cover single actions.
+[Done] Confirmation prompt: A focused approval for one risky action, such as sending, deleting, or purchasing. ActionPlan is better for multi-step plans; this would cover single actions.
+
 In the answer
 
 Answer sections: Lightweight structure for summaries, details, caveats, and next steps. It would standardize long answers without forcing a rigid layout.

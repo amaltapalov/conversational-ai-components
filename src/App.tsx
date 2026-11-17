@@ -10,6 +10,10 @@ import {
 } from "@/components/xds/action-plan"
 import { Button } from "@/components/xds/button"
 import {
+  ConfirmationPrompt,
+  type ConfirmationPromptStatus,
+} from "@/components/xds/confirmation-prompt"
+import {
   CapabilityIntro,
   type CapabilityIntroStartersLayout,
   type CapabilityItem,
@@ -63,6 +67,14 @@ import {
   SelectValue,
 } from "@/components/xds/select"
 import { Textarea } from "@/components/xds/textarea"
+import {
+  ToolResult,
+  type ToolResultStatus,
+} from "@/components/xds/tool-result"
+import {
+  ResponseStatus,
+  type ResponseActivity,
+} from "@/components/xds/response-status"
 import { AssistantHomeExample } from "@/examples/assistant-home-example"
 import { ChatbotExample } from "@/examples/chatbot-example"
 import {
@@ -657,6 +669,76 @@ function StreamOfThoughtPreview() {
   )
 }
 
+const responseActivities: ResponseActivity[] = [
+  "reasoning",
+  "search",
+  "read",
+  "tool",
+  "drafting",
+]
+
+function ResponseStatusPreview() {
+  const [index, setIndex] = useState(0)
+  const [stopped, setStopped] = useState(false)
+
+  const status: StreamOfThoughtStatus =
+    index >= responseActivities.length
+      ? "complete"
+      : stopped
+        ? "stopped"
+        : "thinking"
+  const activity =
+    responseActivities[Math.min(index, responseActivities.length - 1)]
+
+  useEffect(() => {
+    if (status !== "thinking") return
+    const timer = window.setTimeout(
+      () => setIndex((current) => current + 1),
+      1400
+    )
+    return () => window.clearTimeout(timer)
+  }, [status, index])
+
+  function restart() {
+    setIndex(0)
+    setStopped(false)
+  }
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-8">
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-end">
+          <Button size="sm" type="button" variant="outline" onClick={restart}>
+            Restart run
+          </Button>
+        </div>
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+          What changed in our travel policy this quarter?
+        </p>
+        <ResponseStatus
+          activity={activity}
+          elapsed={index * 1.4}
+          status={status}
+          onStop={() => setStopped(true)}
+        />
+        {status === "complete" && (
+          <p className="text-sm leading-relaxed">
+            Two changes took effect this quarter: economy class is now required
+            for flights under six hours, and hotel bookings must go through the
+            approved booking tool.
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium text-muted-foreground">Other states</p>
+        <ResponseStatus status="waiting" />
+        <ResponseStatus status="error" />
+        <ResponseStatus status="stopped" />
+      </div>
+    </div>
+  )
+}
+
 const initialPlanSteps: ActionPlanStep[] = [
   {
     id: "metrics",
@@ -767,6 +849,229 @@ function ActionPlanPreview() {
         {planStatus === "cancelled" && (
           <p className="text-sm text-muted-foreground">
             Plan cancelled. Restart the demo to try again.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ToolResultPreview() {
+  const [saveStatus, setSaveStatus] = useState<ToolResultStatus>("running")
+  const [emailStatus, setEmailStatus] = useState<ToolResultStatus>("error")
+  const [runId, setRunId] = useState(0)
+
+  useEffect(() => {
+    if (saveStatus !== "running") return
+    const timer = window.setTimeout(() => setSaveStatus("success"), 1500)
+    return () => window.clearTimeout(timer)
+  }, [saveStatus, runId])
+
+  useEffect(() => {
+    if (emailStatus !== "running") return
+    const timer = window.setTimeout(() => setEmailStatus("success"), 1500)
+    return () => window.clearTimeout(timer)
+  }, [emailStatus])
+
+  function restart() {
+    setSaveStatus("running")
+    setEmailStatus("error")
+    setRunId((current) => current + 1)
+  }
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" type="button" variant="outline" onClick={restart}>
+          Restart demo
+        </Button>
+      </div>
+      <ToolResult
+        key={`save-${runId}`}
+        duration={2}
+        status={saveStatus}
+        title={
+          saveStatus === "cancelled"
+            ? "Save undone"
+            : saveStatus === "running"
+              ? "Saving notes to your workspace"
+              : "Saved notes to your workspace"
+        }
+        tool="Workspace · save_file"
+        summary={
+          saveStatus === "cancelled" ? "notes.md was removed" : "notes.md · 1.2 KB"
+        }
+        fields={[
+          { label: "File", value: "notes.md" },
+          { label: "Location", value: "Team workspace / AI pilot" },
+        ]}
+        detail={{
+          input: '{ "path": "AI pilot/notes.md", "overwrite": false }',
+          output: '{ "saved": true, "bytes": 1214 }',
+        }}
+        onUndo={() => setSaveStatus("cancelled")}
+      />
+      <ToolResult
+        key={`email-${runId}`}
+        duration={emailStatus === "error" ? 30 : 3}
+        status={emailStatus}
+        title={
+          emailStatus === "success"
+            ? "Sent summary to 3 recipients"
+            : emailStatus === "running"
+              ? "Sending summary"
+              : "Couldn't send summary"
+        }
+        tool="Mail · send"
+        summary={
+          emailStatus === "error"
+            ? "The mail service timed out"
+            : "Subject: Q3 AI adoption summary"
+        }
+        fields={[
+          { label: "To", value: "leadership-team@example.com" },
+          { label: "Subject", value: "Q3 AI adoption summary" },
+        ]}
+        detail={{
+          output:
+            emailStatus === "error"
+              ? '{ "error": "ETIMEDOUT", "retryable": true }'
+              : '{ "delivered": 3 }',
+        }}
+        onRetry={() => setEmailStatus("running")}
+      />
+      <ToolResult
+        duration={1}
+        status="success"
+        title="Created a calendar event"
+        tool="Calendar · create_event"
+        summary="Tue 10:00–10:30 · AI pilot review"
+      />
+    </div>
+  )
+}
+
+type ConfirmationScenario = "send" | "delete"
+
+function ConfirmationPromptPreview() {
+  const [scenario, setScenario] = useState<ConfirmationScenario>("send")
+  const [status, setStatus] = useState<ConfirmationPromptStatus>("pending")
+  const [simulateFailure, setSimulateFailure] = useState(false)
+  const [notice, setNotice] = useState("")
+
+  useEffect(() => {
+    if (status !== "confirming") return
+    const timer = window.setTimeout(
+      () => setStatus(simulateFailure ? "error" : "confirmed"),
+      1200
+    )
+    return () => window.clearTimeout(timer)
+  }, [status, simulateFailure])
+
+  function restart(nextScenario: ConfirmationScenario = scenario) {
+    setScenario(nextScenario)
+    setStatus("pending")
+    setNotice("")
+  }
+
+  const isSend = scenario === "send"
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div aria-label="Scenario" className="flex gap-2" role="group">
+          {(
+            [
+              { value: "send", label: "Send email" },
+              { value: "delete", label: "Delete files" },
+            ] as const
+          ).map((option) => (
+            <Button
+              key={option.value}
+              aria-pressed={scenario === option.value}
+              size="sm"
+              type="button"
+              variant={scenario === option.value ? "secondary" : "tertiary"}
+              onClick={() => restart(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              checked={simulateFailure}
+              className="size-4 accent-primary"
+              type="checkbox"
+              onChange={(event) => setSimulateFailure(event.target.checked)}
+            />
+            Simulate failure
+          </label>
+          <Button size="sm" type="button" variant="outline" onClick={() => restart()}>
+            Restart demo
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-4">
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+          {isSend
+            ? "Email the Q3 summary to the leadership team."
+            : "Delete last year's draft reports from the shared drive."}
+        </p>
+        {isSend ? (
+          <ConfirmationPrompt
+            key="send"
+            confirmLabel="Send email"
+            description="I've drafted the email below. It will be sent from your account."
+            fields={[
+              { label: "To", value: "leadership-team@example.com (12 people)" },
+              { label: "Subject", value: "Q3 AI adoption summary" },
+            ]}
+            status={status}
+            title="Send email to Leadership team"
+            onCancel={() => setStatus("cancelled")}
+            onConfirm={() => setStatus("confirming")}
+            onEdit={() => setNotice("Edit returns the request to the composer.")}
+          >
+            <p>
+              Hi all, here is a short summary of Q3 AI adoption: weekly active
+              users grew 18%, and three teams moved from pilot to rollout.
+            </p>
+          </ConfirmationPrompt>
+        ) : (
+          <ConfirmationPrompt
+            key="delete"
+            confirmLabel="Delete 14 files"
+            description="These files haven't been opened in over 12 months."
+            fields={[
+              { label: "Location", value: "Shared drive / Reports / 2025 drafts" },
+              { label: "Files", value: "14 files · 38 MB" },
+            ]}
+            intent="destructive"
+            irreversible
+            status={status}
+            title="Delete 14 draft reports"
+            onCancel={() => setStatus("cancelled")}
+            onConfirm={() => setStatus("confirming")}
+            onEdit={() => setNotice("Edit returns the request to the composer.")}
+          />
+        )}
+        {notice && (
+          <p className="text-sm text-muted-foreground" role="status">
+            {notice}
+          </p>
+        )}
+        {status === "confirmed" && (
+          <p className="text-sm leading-relaxed">
+            {isSend
+              ? "Done. The summary was sent to 12 people."
+              : "Done. 14 files were deleted."}
+          </p>
+        )}
+        {status === "cancelled" && (
+          <p className="text-sm text-muted-foreground">
+            Okay, nothing was {isSend ? "sent" : "deleted"}.
           </p>
         )}
       </div>
@@ -1007,6 +1312,61 @@ const showLabel = true
 />`,
     preview: () => <StreamOfThoughtPreview />,
   },
+  "response-status": {
+    description:
+      "A compact indicator for short waits, such as searching or drafting, when a full stream of thought would be too much.",
+    code: `<ResponseStatus
+  status="thinking" // thinking | waiting | error | stopped | complete (renders nothing)
+  activity="search" // reasoning | search | read | tool | code | drafting
+  elapsed={4}
+  onStop={stopRun}
+/>`,
+    preview: () => <ResponseStatusPreview />,
+  },
+  "tool-result": {
+    description:
+      "A compact record of one action the AI took and what came of it, kept separate from reasoning and the answer.",
+    code: `<ToolResult
+  status="success" // running | success | error | cancelled
+  title="Saved notes to your workspace"
+  tool="Workspace · save_file"
+  summary="notes.md · 1.2 KB"
+  duration={2}
+  fields={[
+    { label: "File", value: "notes.md" },
+    { label: "Location", value: "Team workspace / AI pilot" },
+  ]}
+  detail={{
+    input: '{ "path": "AI pilot/notes.md" }',
+    output: '{ "saved": true }',
+  }}
+  onUndo={undoSave} // shown on success
+  onRetry={retrySave} // shown on error
+/>`,
+    preview: () => <ToolResultPreview />,
+  },
+  "confirmation-prompt": {
+    description:
+      "A focused approval for one risky action, such as sending, deleting, or purchasing, before the AI carries it out.",
+    code: `<ConfirmationPrompt
+  status="pending" // pending | confirming | confirmed | cancelled | error
+  intent="destructive" // default | destructive
+  title="Delete 14 draft reports"
+  description="These files haven't been opened in over 12 months."
+  fields={[
+    { label: "Location", value: "Shared drive / Reports / 2025 drafts" },
+    { label: "Files", value: "14 files · 38 MB" },
+  ]}
+  irreversible // or a custom warning node
+  confirmLabel="Delete 14 files"
+  onConfirm={deleteFiles}
+  onCancel={cancel}
+  onEdit={editRequest}
+>
+  {/* Optional preview, e.g. an email body */}
+</ConfirmationPrompt>`,
+    preview: () => <ConfirmationPromptPreview />,
+  },
   "action-plan": {
     description:
       "The steps the AI intends to take, shown before it runs so people can review, edit, and approve them.",
@@ -1050,9 +1410,12 @@ const conversationalAiIds = new Set([
   "action-plan",
   "capability-intro",
   "citations",
+  "confirmation-prompt",
   "initial-cta",
+  "response-status",
   "stream-of-thought",
   "suggestions",
+  "tool-result",
 ])
 
 const componentGroups: { name: string; items: NavItem[] }[] = [
