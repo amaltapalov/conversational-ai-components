@@ -366,7 +366,7 @@ function StreamOfThought({
       data-slot="stream-of-thought"
       data-status={status}
       className={cn(
-        "w-full bg-card text-sm text-card-foreground ring-1 ring-foreground/10",
+        "w-full overflow-hidden rounded-lg bg-card text-sm text-card-foreground ring-1 ring-foreground/10",
         className
       )}
     >

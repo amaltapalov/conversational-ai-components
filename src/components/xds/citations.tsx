@@ -20,6 +20,16 @@ type ResolvedCitation = {
 
 const CitationContext = createContext<Map<string, ResolvedCitation> | null>(null)
 const citationNumberClassName = "font-semibold text-accent-brand"
+const labelTailLength = 16
+
+function splitLabel(label: string) {
+  const chars = Array.from(label)
+  const tailLength = Math.min(labelTailLength, Math.floor(chars.length / 2))
+  return [
+    chars.slice(0, chars.length - tailLength).join(""),
+    chars.slice(chars.length - tailLength).join(""),
+  ]
+}
 
 export type SourcesProps = {
   items: CitationItem[]
@@ -67,7 +77,7 @@ function Sources({
           <div className="flex items-start justify-between gap-4">
             <details
               data-slot="sources-disclosure"
-              className="group/citations"
+              className="group/citations min-w-0"
             >
               <summary className="flex w-fit cursor-pointer list-none items-center gap-2 text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
                 <ChevronDown
@@ -91,6 +101,7 @@ function Sources({
                   const label = [item.title, item.source, item.locator]
                     .filter(Boolean)
                     .join(" - ")
+                  const [labelHead, labelTail] = splitLabel(label)
                   const chipClassName =
                     "flex w-fit max-w-full items-center gap-2 rounded-full border border-border bg-background py-1 pl-3 pr-3 text-foreground"
 
@@ -117,7 +128,18 @@ function Sources({
                         >
                           {index + 1}
                         </span>
-                        <span className="min-w-0 truncate">{label}</span>
+                        {/* Ellipsis lands in the middle: the head shrinks, the tail stays visible */}
+                        <span
+                          data-slot="citation-label"
+                          className="flex min-w-0"
+                        >
+                          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-pre">
+                            {labelHead}
+                          </span>
+                          <span className="shrink-0 whitespace-pre">
+                            {labelTail}
+                          </span>
+                        </span>
                       </a>
                     </li>
                   )

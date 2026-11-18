@@ -25,6 +25,10 @@ import {
   type ConfirmationPromptStatus,
 } from "@/components/xds/confirmation-prompt"
 import {
+  PermissionRequest,
+  type PermissionRequestStatus,
+} from "@/components/xds/permission-request"
+import {
   CapabilityIntro,
   type CapabilityIntroStartersLayout,
   type CapabilityItem,
@@ -182,7 +186,7 @@ function InitialCtaPreview({
           </span>
           <div
             aria-label="Suggestion placement"
-            className="flex border border-border bg-muted p-0.5"
+            className="flex rounded-full border border-border bg-muted p-0.5"
             role="group"
           >
             {(["above", "below"] as const).map((placement) => (
@@ -651,7 +655,7 @@ function StreamOfThoughtPreview() {
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
           {prompt}
         </p>
         <StreamOfThought
@@ -729,7 +733,7 @@ function ResponseStatusPreview() {
             Restart run
           </Button>
         </div>
-        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
           What changed in our travel policy this quarter?
         </p>
         <ResponseStatus
@@ -845,7 +849,7 @@ function ActionPlanPreview() {
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
           {prompt}
         </p>
         <ActionPlan
@@ -1031,7 +1035,7 @@ function ConfirmationPromptPreview() {
         </div>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
           {isSend
             ? "Email the Q3 summary to the leadership team."
             : "Delete last year's draft reports from the shared drive."}
@@ -1090,6 +1094,81 @@ function ConfirmationPromptPreview() {
           <p className="text-sm text-muted-foreground">
             Okay, nothing was {isSend ? "sent" : "deleted"}.
           </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PermissionRequestPreview() {
+  const [status, setStatus] = useState<PermissionRequestStatus>("pending")
+  const [simulateFailure, setSimulateFailure] = useState(false)
+
+  useEffect(() => {
+    if (status !== "granting") return
+    const timer = window.setTimeout(
+      () => setStatus(simulateFailure ? "error" : "granted"),
+      1200
+    )
+    return () => window.clearTimeout(timer)
+  }, [status, simulateFailure])
+
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            checked={simulateFailure}
+            className="size-4 accent-primary"
+            type="checkbox"
+            onChange={(event) => setSimulateFailure(event.target.checked)}
+          />
+          Simulate failure
+        </label>
+        <Button
+          size="sm"
+          type="button"
+          variant="outline"
+          onClick={() => setStatus("pending")}
+        >
+          Restart demo
+        </Button>
+      </div>
+      <div className="flex flex-col gap-4">
+        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+          Find a 30-minute slot next week for the AI pilot review.
+        </p>
+        <PermissionRequest
+          fallback="I'll suggest times based on typical working hours. You'll need to check them against your calendar."
+          reason="To find a time that works, I need to see when you and the attendees are busy."
+          scopes={[
+            { label: "Your calendar events next week (titles, times, attendees)" },
+            { label: "Free/busy times for the people you invite" },
+          ]}
+          status={status}
+          title="Allow access to your Outlook calendar?"
+          onAllow={() => setStatus("granting")}
+          onContinueWithout={() => setStatus("declined")}
+        />
+        {status === "granted" && (
+          <p className="text-sm leading-relaxed">
+            Tuesday 10:00–10:30 and Thursday 14:00–14:30 are free for you and
+            all 4 attendees.
+          </p>
+        )}
+        {status === "declined" && (
+          <>
+            <p className="text-sm leading-relaxed">
+              Mid-morning slots such as Tuesday or Thursday 10:00–10:30 tend to
+              work well for review meetings.
+            </p>
+            <LimitationNotice
+              actionLabel="Allow access"
+              kind="permission"
+              title="I didn't check your calendar, so these times may clash with existing meetings."
+              onAction={() => setStatus("pending")}
+            />
+          </>
         )}
       </div>
     </div>
@@ -1221,7 +1300,7 @@ function PrivacyNoticePreview() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
+          <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
             What's the latest news on EU AI Act enforcement?
           </p>
           <PrivacyNotice
@@ -1541,6 +1620,23 @@ const showLabel = true
 </ConfirmationPrompt>`,
     preview: () => <ConfirmationPromptPreview />,
   },
+  "permission-request": {
+    description:
+      "Asks for access before the AI uses a resource: why it needs access, what it will access, and how to continue without it.",
+    code: `<PermissionRequest
+  status="pending" // pending | granting | granted | declined | error
+  title="Allow access to your Outlook calendar?"
+  reason="To find a time that works, I need to see when you and the attendees are busy."
+  scopes={[
+    { label: "Your calendar events next week", access: "read" },
+    { label: "Free/busy times for the people you invite" },
+  ]}
+  fallback="I'll suggest times based on typical working hours."
+  onAllow={grantAccess}
+  onContinueWithout={continueWithout}
+/>`,
+    preview: () => <PermissionRequestPreview />,
+  },
   "limitation-notice": {
     description:
       "A quiet, factual note about what an answer couldn't cover, such as stale data, missing access, conflicting sources, or incomplete coverage.",
@@ -1636,6 +1732,7 @@ const conversationalAiIds = new Set([
   "confirmation-prompt",
   "initial-cta",
   "limitation-notice",
+  "permission-request",
   "privacy-notice",
   "response-status",
   "stream-of-thought",
@@ -1701,6 +1798,107 @@ const overviewLinks = [
     description: "A working example combining the library.",
   },
 ]
+
+type BenefitKind = "delivery" | "consistency" | "trust" | "control"
+
+const overviewBenefits: {
+  id: BenefitKind
+  title: string
+  description: string
+}[] = [
+  {
+    id: "delivery",
+    title: "Faster delivery",
+    description: "Ready-to-use conversation building blocks.",
+  },
+  {
+    id: "consistency",
+    title: "Consistent experience",
+    description: "One visual language across AI features.",
+  },
+  {
+    id: "trust",
+    title: "Clear trust signals",
+    description: "Privacy, limitation and status notices.",
+  },
+  {
+    id: "control",
+    title: "Controlled interactions",
+    description: "Reviewable plans and confirmations.",
+  },
+]
+
+function BenefitIllustration({ kind }: { kind: BenefitKind }) {
+  if (kind === "delivery") {
+    return (
+      <div className="w-full max-w-[15rem] rounded-xl bg-neutral-900 p-4 font-mono text-[13px] text-neutral-100 shadow-sm">
+        <div className="mb-4 flex gap-1.5">
+          <span className="size-2 rounded-full bg-neutral-600" />
+          <span className="size-2 rounded-full bg-neutral-600" />
+          <span className="size-2 rounded-full bg-neutral-600" />
+        </div>
+        <p>
+          <span className="text-accent-brand">$</span> add @xds/chat
+        </p>
+        <p className="mt-2 text-neutral-400">✓ Added chat</p>
+      </div>
+    )
+  }
+
+  if (kind === "consistency") {
+    return (
+      <div className="flex w-full max-w-[15rem] flex-col gap-3">
+        <div className="flex gap-3">
+          <span className="flex h-10 flex-1 items-center justify-center rounded-full bg-foreground">
+            <span className="h-1.5 w-2/3 rounded-full bg-background" />
+          </span>
+          <span className="flex h-10 flex-1 items-center justify-center rounded-full border-2 border-border">
+            <span className="h-1.5 w-2/3 rounded-full bg-muted-foreground/40" />
+          </span>
+        </div>
+        <div className="flex h-12 items-center justify-between rounded-xl border-2 border-border bg-background px-3">
+          <span className="h-1.5 w-1/2 rounded-full bg-muted-foreground/40" />
+          <span className="flex h-6 w-10 items-center justify-end rounded-full bg-accent-brand p-1">
+            <span className="size-4 rounded-full bg-white" />
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  if (kind === "trust") {
+    return (
+      <div className="flex w-full max-w-[15rem] flex-col gap-2 rounded-xl border-2 border-border bg-background p-3">
+        <span className="h-1.5 w-5/6 rounded-full bg-muted-foreground/40" />
+        <span className="h-1.5 w-2/3 rounded-full bg-muted-foreground/40" />
+        <div className="mt-2 flex items-center gap-2 rounded-lg border-l-4 border-accent-brand bg-muted px-2 py-2">
+          <span className="flex size-5 items-center justify-center rounded-full bg-accent-brand">
+            <Check aria-hidden="true" strokeWidth={3} className="size-3 text-white" />
+          </span>
+          <span className="h-1.5 flex-1 rounded-full bg-muted-foreground/40" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex w-full max-w-[15rem] gap-3">
+      <div className="flex w-2/5 flex-col gap-2 rounded-xl border-2 border-border bg-background p-2.5">
+        <span className="h-1.5 w-full rounded-full bg-foreground" />
+        <span className="h-1.5 w-3/4 rounded-full bg-muted-foreground/40" />
+        <span className="h-1.5 w-3/4 rounded-full bg-muted-foreground/40" />
+        <span className="h-1.5 w-full rounded-full bg-accent-brand" />
+      </div>
+      <div className="flex flex-1 flex-col gap-2 rounded-xl border-2 border-border bg-background p-2.5">
+        <div className="flex gap-2">
+          <span className="h-6 flex-1 rounded bg-muted" />
+          <span className="h-6 flex-1 rounded bg-muted" />
+        </div>
+        <span className="h-8 rounded border-2 border-dashed border-accent-brand" />
+      </div>
+    </div>
+  )
+}
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -1874,13 +2072,41 @@ export function App() {
       <main className="min-w-0 pb-16">
         {isIntroduction ? (
           <>
-            <PageHero
-              title="Conversational AI Components"
-              description="Composable patterns for AI conversations, from the first prompt to grounded answers and human-approved actions."
-            />
+            <header className="docs-hero px-6 pt-16 pb-4 md:px-12 md:pt-20 xl:px-24">
+              <h1 className="max-w-[56rem] text-5xl leading-[0.95] font-bold tracking-[-0.05em] md:text-7xl">
+                Conversational AI design library
+              </h1>
+              <p className="mt-8 max-w-[48rem] text-xl tracking-[-0.02em] text-muted-foreground">
+                Composable patterns for AI conversations, from the first prompt
+                to grounded answers and human-approved actions.
+              </p>
+              <ul className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                {overviewBenefits.map((benefit) => (
+                  <li
+                    key={benefit.id}
+                    className="flex flex-col rounded-2xl border border-border bg-background p-3"
+                  >
+                    <div
+                      aria-hidden="true"
+                      className="flex h-48 items-center justify-center rounded-xl bg-muted p-6"
+                    >
+                      <BenefitIllustration kind={benefit.id} />
+                    </div>
+                    <div className="px-3 pt-5 pb-3">
+                      <h2 className="text-xl font-bold tracking-[-0.03em]">
+                        {benefit.title}
+                      </h2>
+                      <p className="mt-1.5 text-base text-muted-foreground">
+                        {benefit.description}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </header>
             <section
               aria-labelledby="explore-heading"
-              className="mt-12 px-6 md:px-24"
+              className="mt-16 px-6 md:px-12 xl:px-24"
             >
               <h2
                 id="explore-heading"

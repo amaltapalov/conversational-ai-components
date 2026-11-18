@@ -39,6 +39,10 @@ import {
   type LimitationKind,
 } from "@/components/xds/limitation-notice"
 import {
+  PermissionRequest,
+  type PermissionRequestStatus,
+} from "@/components/xds/permission-request"
+import {
   PrivacyNotice,
   type PrivacyNoticeItem,
 } from "@/components/xds/privacy-notice"
@@ -113,6 +117,7 @@ type Turn = {
   requireApproval: boolean
   simulateError: boolean
   confirmation: ConfirmationPromptStatus | null
+  permission: PermissionRequestStatus | null
 }
 
 const starterSuggestions: SuggestionItem[] = [
@@ -135,6 +140,10 @@ const starterSuggestions: SuggestionItem[] = [
   {
     label: "Search the web for AI news",
     prompt: "Search the web for the latest news on generative AI regulation.",
+  },
+  {
+    label: "Check my calendar",
+    prompt: "Check my calendar and suggest a time for the AI pilot review.",
   },
 ]
 
@@ -403,7 +412,16 @@ function createTurn(
     requireApproval: settings.requireApproval,
     simulateError: settings.simulateError,
     confirmation: needsConfirmation ? "pending" : null,
+    permission: /\b(calendar|meetings?|schedule)\b/i.test(prompt) ? "pending" : null,
   }
+}
+
+function isAwaitingPermission(turn: Turn) {
+  return (
+    turn.permission === "pending" ||
+    turn.permission === "granting" ||
+    turn.permission === "error"
+  )
 }
 
 function updateLast(turns: Turn[], update: (turn: Turn) => Turn) {
@@ -559,6 +577,7 @@ export function ChatbotExample() {
     liveStatus === "complete" && (live?.wordCount ?? 0) < liveTotalWords
   const awaitingConfirmation =
     live?.confirmation === "pending" || live?.confirmation === "confirming"
+  const awaitingPermission = live ? isAwaitingPermission(live) : false
   const isRunning =
     liveStatus === "thinking" ||
     liveStatus === "waiting" ||
@@ -568,7 +587,7 @@ export function ChatbotExample() {
   const instantAnswer = !settings.streamAnswer || reducedMotion
 
   useEffect(() => {
-    if (liveStatus === "thinking") {
+    if (liveStatus === "thinking" && !awaitingPermission) {
       const timer = window.setTimeout(() => {
         setTurns((current) =>
           updateLast(current, (turn) =>
@@ -592,7 +611,17 @@ export function ChatbotExample() {
       }, live?.wordCount === 0 ? 700 : 40)
       return () => window.clearTimeout(timer)
     }
-  }, [live, liveStatus, isAnswering, instantAnswer, liveTotalWords])
+  }, [live, liveStatus, isAnswering, instantAnswer, liveTotalWords, awaitingPermission])
+
+  useEffect(() => {
+    if (live?.permission !== "granting") return
+    const timer = window.setTimeout(() => {
+      setTurns((current) =>
+        updateLast(current, (turn) => ({ ...turn, permission: "granted" }))
+      )
+    }, 1200)
+    return () => window.clearTimeout(timer)
+  }, [live?.permission])
 
   useEffect(() => {
     if (live?.confirmation !== "confirming") return
@@ -680,11 +709,13 @@ export function ChatbotExample() {
         variant="chat"
         title="Message the assistant"
         placeholder={
-          awaitingConfirmation
-            ? "Confirm or cancel the pending action..."
-            : isRunning
-              ? "Waiting for the response..."
-              : "Ask a question..."
+          awaitingPermission
+            ? "Allow or decline the access request..."
+            : awaitingConfirmation
+              ? "Confirm or cancel the pending action..."
+              : isRunning
+                ? "Waiting for the response..."
+                : "Ask a question..."
         }
         modes={[
           { value: "assistant", label: "Assistant" },
@@ -828,7 +859,7 @@ export function ChatbotExample() {
                 return (
                   <li key={turn.id} className="flex flex-col gap-4">
                     <div className="flex max-w-[80%] flex-col items-end gap-1 self-end">
-                      <div className="bg-muted px-4 py-2">
+                      <div className="rounded-lg bg-muted px-4 py-2">
                         <p className="mb-1 text-xs text-muted-foreground">
                           {turn.mode === "assistant" ? "Assistant" : "Novartis Chat"}
                         </p>
@@ -873,6 +904,24 @@ export function ChatbotExample() {
                       </div>
                     </div>
 
+                    {turn.permission && (
+                      <PermissionRequest
+                        fallback="I'll suggest times based on typical working hours. You'll need to check them against your calendar."
+                        reason="To suggest a time that works, I need to see when you're busy."
+                        scopes={[
+                          { label: "Your calendar events for the next two weeks (titles, times, attendees)" },
+                        ]}
+                        status={turn.permission}
+                        title="Allow access to your Outlook calendar?"
+                        onAllow={() =>
+                          updateTurn(turn.id, (t) => ({ ...t, permission: "granting" }))
+                        }
+                        onContinueWithout={() =>
+                          updateTurn(turn.id, (t) => ({ ...t, permission: "declined" }))
+                        }
+                      />
+                    )}
+
                     {turn.externalSearch && turn.phase > 0 && (
                       <PrivacyNotice
                         variant="inline"
@@ -893,7 +942,7 @@ export function ChatbotExample() {
                       />
                     )}
 
-                    {turn.showReasoning ||
+                    {isAwaitingPermission(turn) ? null : turn.showReasoning ||
                     status === "waiting" ||
                     status === "error" ? (
                       <StreamOfThought
@@ -1087,6 +1136,13 @@ export function ChatbotExample() {
                               )
                             })}
                           </div>
+                        )}
+
+                        {answerDone && turn.permission === "declined" && (
+                          <LimitationNotice
+                            kind="permission"
+                            title="I didn't check your calendar, so suggested times may clash with existing meetings."
+                          />
                         )}
 
                         {answerDone && turn.confirmation && (

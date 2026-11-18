@@ -39,4 +39,4 @@ Trust and control
 
 [Done] Privacy notice: Inline disclosure for data use, retention, or external sharing. InitialCta has a disclaimer, but a richer version would help with policy-specific contexts.
 
-Permission request: Explains why the assistant needs access, what it will access, and how to continue without granting access.
+[Done] Permission request: Explains why the assistant needs access, what it will access, and how to continue without granting access.

@@ -234,6 +234,7 @@ function InitialCta({
       >
           <div
             className={cn(
+              "overflow-hidden", disclaimer ? "rounded-t-lg" : "rounded-lg",
               "border border-border focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800",
               isDraggingFiles && "border-ring ring-3 ring-ring/50",
               disabled ? "bg-muted dark:bg-gray-900" : "bg-background dark:bg-gray-900"
@@ -329,7 +330,7 @@ function InitialCta({
                 {modes.length > 0 && (
                   <div
                     aria-label="Assistant mode"
-                    className="flex flex-wrap border border-border bg-muted p-0.5 dark:border-gray-800 dark:bg-gray-900"
+                    className="flex flex-wrap rounded-full border border-border bg-muted p-0.5 dark:border-gray-800 dark:bg-gray-900"
                     role="group"
                   >
                     {modes.map((item) => {
@@ -398,7 +399,7 @@ function InitialCta({
           )}
         </div>
           {disclaimer && (
-            <p className="border border-t-0 border-border bg-muted px-4 py-3 text-sm text-muted-foreground dark:border-gray-800 dark:bg-gray-900">
+            <p className="rounded-b-lg border border-t-0 border-border bg-muted px-4 py-3 text-sm text-muted-foreground dark:border-gray-800 dark:bg-gray-900">
               {disclaimer}
             </p>
           )}
@@ -418,7 +419,7 @@ function InitialCta({
           )}
         </header>
 
-        <div className="border border-input bg-background focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800 dark:bg-gray-900">
+        <div className="overflow-hidden rounded-lg border border-input bg-background focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800 dark:bg-gray-900">
           <Textarea
             aria-label={title}
             className="min-h-32 resize-y border-0 bg-transparent px-4 py-3 text-sm focus-visible:border-transparent focus-visible:ring-0 dark:!bg-gray-900"

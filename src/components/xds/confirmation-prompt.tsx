@@ -138,7 +138,7 @@ function ConfirmationPrompt({
       data-intent={intent}
       data-status={status}
       className={cn(
-        "w-full bg-card text-sm text-card-foreground ring-1 ring-foreground/10",
+        "w-full overflow-hidden rounded-lg bg-card text-sm text-card-foreground ring-1 ring-foreground/10",
         className
       )}
       {...props}
@@ -204,7 +204,7 @@ function ConfirmationPrompt({
           <div
             aria-label="Preview"
             data-slot="confirmation-prompt-preview"
-            className="max-h-48 overflow-y-auto bg-muted p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="max-h-48 overflow-y-auto rounded-lg bg-muted p-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             role="region"
             tabIndex={0}
           >
