@@ -737,11 +737,14 @@ export function ChatbotExample() {
         onSubmit={({ prompt: submitted, mode: submittedMode, attachments: submittedAttachments }) =>
           send(submitted, submittedMode, submittedAttachments)
         }
-      />
-      <PrivacyNotice
-        items={privacyItems}
-        policyHref="#privacy-policy"
-        title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+        footer={
+          <PrivacyNotice
+            variant="embedded"
+            items={privacyItems}
+            policyHref="#privacy-policy"
+            title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+          />
+        }
       />
     </div>
   )

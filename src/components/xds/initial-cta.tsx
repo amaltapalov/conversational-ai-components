@@ -3,6 +3,7 @@ import {
   useState,
   type DragEvent,
   type FormEvent,
+  type ReactNode,
 } from "react"
 import {
   ArrowUp,
@@ -89,6 +90,8 @@ export type InitialCtaProps = {
   onAttachmentErrorDismiss?: () => void
   onVoiceInput?: () => void
   disclaimer?: string
+  /** Rendered inside the input box below the disclaimer, e.g. an embedded PrivacyNotice */
+  footer?: ReactNode
   attachLabel?: string
   submitLabel?: string
   disabled?: boolean
@@ -116,6 +119,7 @@ function InitialCta({
   onAttachmentsChange,
   onVoiceInput,
   disclaimer = "AI responses may be inaccurate. Verify important information.",
+  footer,
   attachLabel = "Attach",
   submitLabel = "Generate",
   disabled = false,
@@ -234,7 +238,7 @@ function InitialCta({
       >
           <div
             className={cn(
-              "overflow-hidden", disclaimer ? "rounded-t-lg" : "rounded-lg",
+              "overflow-hidden rounded-lg",
               "border border-border focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800",
               isDraggingFiles && "border-ring ring-3 ring-ring/50",
               disabled ? "bg-muted dark:bg-gray-900" : "bg-background dark:bg-gray-900"
@@ -397,12 +401,13 @@ function InitialCta({
               </Button>
             </div>
           )}
-        </div>
           {disclaimer && (
-            <p className="rounded-b-lg border border-t-0 border-border bg-muted px-4 py-3 text-sm text-muted-foreground dark:border-gray-800 dark:bg-gray-900">
+            <p className="border-t border-border bg-muted px-4 py-3 text-sm text-muted-foreground dark:border-gray-800 dark:bg-gray-900">
               {disclaimer}
             </p>
           )}
+          {footer && <div className="border-t border-border">{footer}</div>}
+        </div>
       </form>
     )
   }

@@ -1285,11 +1285,14 @@ function PrivacyNoticePreview() {
                 setFeedback(`Ready to send: "${submitted}"`)
                 setPrompt("")
               }}
-            />
-            <PrivacyNotice
-              items={privacyItems}
-              policyHref="#privacy-policy"
-              title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+              footer={
+                <PrivacyNotice
+                  variant="embedded"
+                  items={privacyItems}
+                  policyHref="#privacy-policy"
+                  title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+                />
+              }
             />
           </div>
           {feedback && (
@@ -1667,16 +1670,22 @@ const showLabel = true
   { topic: "sharing", description: "Data stays within the company tenant." },
 ]
 
-{/* Composer: replaces the InitialCta disclaimer */}
-<div>
-  <InitialCta variant="chat" disclaimer="" value={prompt} onValueChange={setPrompt} onSubmit={send} />
-  <PrivacyNotice
-    variant="composer"
-    title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
-    items={items}
-    policyHref="/privacy"
-  />
-</div>
+{/* Composer: the notice sits inside the input block via the footer slot */}
+<InitialCta
+  variant="chat"
+  disclaimer=""
+  value={prompt}
+  onValueChange={setPrompt}
+  onSubmit={send}
+  footer={
+    <PrivacyNotice
+      variant="embedded"
+      title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+      items={items}
+      policyHref="/privacy"
+    />
+  }
+/>
 
 {/* Inline: in the turn where data leaves the organization */}
 <PrivacyNotice
@@ -1831,16 +1840,11 @@ const overviewBenefits: {
 function BenefitIllustration({ kind }: { kind: BenefitKind }) {
   if (kind === "delivery") {
     return (
-      <div className="w-full max-w-[15rem] rounded-xl bg-neutral-900 p-4 font-mono text-[13px] text-neutral-100 shadow-sm">
-        <div className="mb-4 flex gap-1.5">
-          <span className="size-2 rounded-full bg-neutral-600" />
-          <span className="size-2 rounded-full bg-neutral-600" />
-          <span className="size-2 rounded-full bg-neutral-600" />
-        </div>
+      <div className="w-full max-w-[15rem] rounded-xl bg-white p-4 font-mono text-[13px] text-foreground shadow-sm">
         <p>
           <span className="text-accent-brand">$</span> add @xds/chat
         </p>
-        <p className="mt-2 text-neutral-400">✓ Added chat</p>
+        <p className="mt-2 text-muted-foreground">✓ Added chat</p>
       </div>
     )
   }
@@ -1979,7 +1983,7 @@ function PageHero({
 }) {
   return (
     <header className="docs-hero px-6 pt-16 pb-12 md:px-24 md:pt-20">
-      <h1 className="text-5xl leading-none font-bold tracking-[-0.04em] md:text-6xl">
+      <h1 className="text-5xl leading-none font-bold tracking-normal md:text-6xl">
         {title}
       </h1>
       <p className="mt-12 max-w-[56rem] text-xl leading-[1.9] tracking-[-0.01em]">
@@ -2073,7 +2077,7 @@ export function App() {
         {isIntroduction ? (
           <>
             <header className="docs-hero px-6 pt-16 pb-4 md:px-12 md:pt-20 xl:px-24">
-              <h1 className="max-w-[56rem] text-5xl leading-[0.95] font-bold tracking-[-0.05em] md:text-7xl">
+              <h1 className="text-3xl leading-[0.95] font-bold tracking-normal whitespace-nowrap sm:text-4xl lg:text-5xl 2xl:text-7xl">
                 Conversational AI design library
               </h1>
               <p className="mt-8 max-w-[48rem] text-xl tracking-[-0.02em] text-muted-foreground">
@@ -2088,12 +2092,12 @@ export function App() {
                   >
                     <div
                       aria-hidden="true"
-                      className="flex h-48 items-center justify-center rounded-xl bg-muted p-6"
+                      className="flex h-36 items-center justify-center rounded-xl bg-muted p-4"
                     >
                       <BenefitIllustration kind={benefit.id} />
                     </div>
                     <div className="px-3 pt-5 pb-3">
-                      <h2 className="text-xl font-bold tracking-[-0.03em]">
+                      <h2 className="text-xl leading-tight font-bold tracking-normal">
                         {benefit.title}
                       </h2>
                       <p className="mt-1.5 text-base text-muted-foreground">
@@ -2110,7 +2114,7 @@ export function App() {
             >
               <h2
                 id="explore-heading"
-                className="flex items-center gap-3 text-4xl leading-tight font-bold tracking-[-0.04em]"
+                className="flex items-center gap-3 text-4xl leading-tight font-bold tracking-normal"
               >
                 From prompt
                 <ChevronRight
