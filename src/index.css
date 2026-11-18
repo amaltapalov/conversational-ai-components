@@ -3,3 +3,28 @@
 @import "shadcn/tailwind.css";
 @import "../styles/fonts.css";
 @import "../styles/theme.css";
+
+/* Docs shell only: grid + brand glow behind page titles, fading into the page. */
+.docs-hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.docs-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 13rem;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(
+      ellipse 40% 90% at 0% 0%,
+      color-mix(in oklab, var(--color-space-orange) 10%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(to right, color-mix(in oklab, var(--color-border) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-border) 60%, transparent) 1px, transparent 1px);
+  background-size: 100% 100%, 2.5rem 2.5rem, 2.5rem 2.5rem;
+  mask-image: linear-gradient(to bottom, black 40%, transparent);
+}

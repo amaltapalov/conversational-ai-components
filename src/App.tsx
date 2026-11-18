@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { ChevronRight, FileText, Lightbulb, PenLine } from "lucide-react"
+import {
+  Check,
+  ChevronRight,
+  FileText,
+  Lightbulb,
+  ChevronLeft,
+  Moon,
+  PenLine,
+  Sun,
+} from "lucide-react"
+
+import { useTheme } from "@/components/theme-provider"
 
 import {
   ActionPlan,
@@ -1668,11 +1679,124 @@ const examplePages: Record<
   },
 }
 
+const overviewLinks = [
+  {
+    id: "initial-cta",
+    title: "Start a conversation.",
+    description: "Prompt composer, modes and attachments.",
+  },
+  {
+    id: "action-plan",
+    title: "Guide the interaction.",
+    description: "Reviewable plans and approval steps.",
+  },
+  {
+    id: "citations",
+    title: "Ground responses.",
+    description: "Sources and inline references for answers.",
+  },
+  {
+    id: "chatbot",
+    title: "See it in context.",
+    description: "A working example combining the library.",
+  },
+]
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
+
+  return (
+    <Button
+      variant="tertiary"
+      size="icon"
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+    >
+      {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+    </Button>
+  )
+}
+
+function SidebarToggle({
+  isOpen,
+  onToggle,
+}: {
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+      aria-expanded={isOpen}
+      onClick={onToggle}
+      className={`fixed top-[4.5rem] z-50 hidden h-8 w-5 items-center justify-center rounded-r-md border border-l-0 border-sidebar-border bg-sidebar text-sidebar-foreground transition-colors hover:bg-sidebar-accent md:flex ${
+        isOpen ? "md:left-[240px]" : "md:left-0"
+      }`}
+    >
+      {isOpen ? (
+        <ChevronLeft aria-hidden="true" className="size-3.5" />
+      ) : (
+        <ChevronRight aria-hidden="true" className="size-3.5" />
+      )}
+    </button>
+  )
+}
+
+function NavButton({
+  isActive,
+  onClick,
+  children,
+}: {
+  isActive: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-current={isActive ? "page" : undefined}
+      className={`flex min-h-10 w-full items-center border-r-2 py-2 pr-2.5 pl-[45px] text-left text-[14px] transition-colors ${
+        isActive
+          ? "border-accent-brand bg-sidebar-accent font-bold text-sidebar-accent-foreground"
+          : "border-transparent text-sidebar-foreground hover:bg-sidebar-accent"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+function PageHero({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <header className="docs-hero px-6 pt-16 pb-12 md:px-24 md:pt-20">
+      <h1 className="text-5xl leading-none font-bold tracking-[-0.04em] md:text-6xl">
+        {title}
+      </h1>
+      <p className="mt-12 max-w-[56rem] text-xl leading-[1.9] tracking-[-0.01em]">
+        {description}
+      </p>
+    </header>
+  )
+}
+
 export function App() {
   const [activeComponentId, setActiveComponentId] = useState<string | null>(null)
   const [suggestionsPlacement, setSuggestionsPlacement] =
     useState<SuggestionsPlacement>("below")
   const [showSuggestionsLabel, setShowSuggestionsLabel] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const activeComponent = navItems.find((item) => item.id === activeComponentId)
   const isIntroduction = activeComponentId === null
   const examplePage = activeComponentId
@@ -1685,114 +1809,114 @@ export function App() {
       : example?.code
 
   return (
-    <div className="min-h-svh bg-background text-foreground md:grid md:grid-cols-[minmax(14rem,22vw)_minmax(0,1fr)]">
-      <aside className="border-b border-border md:min-h-svh md:border-r md:border-b-0">
-        <div className="px-6 py-6 md:px-8 md:py-8">
-          <p className="mb-5 text-sm font-bold text-muted-foreground">Components</p>
-          <nav
-            aria-label="xDS components"
-            className="flex flex-col gap-2"
-          >
-            <button
-              type="button"
-              aria-current={isIntroduction ? "page" : undefined}
-              className={`min-h-10 w-full border-l-2 px-3 text-left text-base transition-colors ${
-                isIntroduction
-                  ? "border-primary bg-muted font-medium text-foreground"
-                  : "border-transparent text-foreground hover:bg-muted"
-              }`}
-              onClick={() => setActiveComponentId(null)}
-            >
-              Overview
-            </button>
+    <div className="min-h-svh bg-background text-foreground">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-5">
+        <p className="text-base font-bold">Components</p>
+        <ThemeToggle />
+      </header>
+
+      <SidebarToggle
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen((open) => !open)}
+      />
+
+      <div
+        className={`md:grid ${
+          isSidebarOpen
+            ? "md:grid-cols-[240px_minmax(0,1fr)]"
+            : "md:grid-cols-[minmax(0,1fr)]"
+        }`}
+      >
+        <aside
+          className={`border-b border-sidebar-border bg-sidebar text-sidebar-foreground md:sticky md:top-14 md:h-[calc(100svh-3.5rem)] md:overflow-y-auto md:border-r md:border-b-0 ${
+            isSidebarOpen ? "" : "md:hidden"
+          }`}
+        >
+          <nav aria-label="xDS components" className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col">
+              <p className="mb-2 pl-5 text-base font-bold text-muted-foreground">
+                Get Started
+              </p>
+              <NavButton
+                isActive={isIntroduction}
+                onClick={() => setActiveComponentId(null)}
+              >
+                Overview
+              </NavButton>
+            </div>
             {componentGroups.map((group) => (
               <details
                 key={group.name}
                 open={group.name !== "General"}
-                className="group/nav"
+                className="group/nav flex flex-col"
               >
-                <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 text-base font-medium text-foreground marker:hidden hover:bg-muted">
+                <summary className="mb-1 flex cursor-pointer list-none items-center gap-2 pl-5 text-base font-bold text-muted-foreground marker:hidden">
                   <ChevronRight
                     aria-hidden="true"
                     className="size-4 transition-transform group-open/nav:rotate-90"
                   />
                   {group.name}
                 </summary>
-                <div className="mt-1 flex flex-col gap-1 pl-4">
-                  {group.items.map((item) => {
-                    const isActive = item.id === activeComponentId
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        aria-current={isActive ? "page" : undefined}
-                        className={`min-h-10 w-full border-l-2 px-3 text-left text-base transition-colors ${
-                          isActive
-                            ? "border-primary bg-muted font-medium text-foreground"
-                            : "border-transparent text-foreground hover:bg-muted"
-                        }`}
-                        onClick={() => setActiveComponentId(item.id)}
-                      >
-                        {item.name}
-                      </button>
-                    )
-                  })}
-                </div>
+                {group.items.map((item) => (
+                  <NavButton
+                    key={item.id}
+                    isActive={item.id === activeComponentId}
+                    onClick={() => setActiveComponentId(item.id)}
+                  >
+                    {item.name}
+                  </NavButton>
+                ))}
               </details>
             ))}
           </nav>
-        </div>
-      </aside>
+        </aside>
 
-      <main className="min-w-0 px-6 py-10 md:px-[clamp(3rem,6.75vw,9.375rem)] md:py-12">
+      <main className="min-w-0 pb-16">
         {isIntroduction ? (
           <>
-            <header>
-              <h1 className="text-5xl leading-none font-bold">
-                Conversational AI Components
-              </h1>
-              <p className="mt-5 max-w-4xl text-lg leading-relaxed text-muted-foreground">
-                Composable patterns for AI conversations, from the first prompt
-                to grounded answers and human-approved actions.
-              </p>
-            </header>
-            <section aria-label="Explore the library" className="mt-12 max-w-5xl">
-              <h2 className="mb-4 text-sm font-bold text-muted-foreground">
-                Explore the library
+            <PageHero
+              title="Conversational AI Components"
+              description="Composable patterns for AI conversations, from the first prompt to grounded answers and human-approved actions."
+            />
+            <section
+              aria-labelledby="explore-heading"
+              className="mt-12 px-6 md:px-24"
+            >
+              <h2
+                id="explore-heading"
+                className="flex items-center gap-3 text-4xl leading-tight font-bold tracking-[-0.04em]"
+              >
+                From prompt
+                <ChevronRight
+                  aria-hidden="true"
+                  strokeWidth={3}
+                  className="size-7 text-accent-brand"
+                />
+                answer.
               </h2>
-              <div className="grid border-t border-border sm:grid-cols-2">
-                {[
-                  {
-                    id: "initial-cta",
-                    title: "Start a conversation",
-                    description: "Prompt composer, modes, and attachments.",
-                  },
-                  {
-                    id: "action-plan",
-                    title: "Guide the interaction",
-                    description: "Reviewable plans and approval steps.",
-                  },
-                  {
-                    id: "citations",
-                    title: "Ground responses",
-                    description: "Sources and inline references for answers.",
-                  },
-                  {
-                    id: "chatbot",
-                    title: "See it in context",
-                    description: "A working example combining the library.",
-                  },
-                ].map((item) => (
+              <p className="mt-3 text-lg text-muted-foreground">
+                Explore the library, one building block at a time.
+              </p>
+              <div className="mt-10 grid gap-x-10 sm:grid-cols-2">
+                {overviewLinks.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className="border-b border-border py-5 text-left hover:bg-muted sm:px-4"
+                    className="group/link flex items-start gap-6 border-b border-border py-8 text-left text-xl tracking-[-0.02em]"
                     onClick={() => setActiveComponentId(item.id)}
                   >
-                    <span className="block text-lg font-medium">{item.title}</span>
-                    <span className="mt-1 block text-sm text-muted-foreground">
-                      {item.description}
+                    <Check
+                      aria-hidden="true"
+                      strokeWidth={2.5}
+                      className="mt-0.5 size-6 shrink-0 text-accent-brand"
+                    />
+                    <span>
+                      <span className="font-bold group-hover/link:text-accent-brand">
+                        {item.title}
+                      </span>{" "}
+                      <span className="text-muted-foreground">
+                        {item.description}
+                      </span>
                     </span>
                   </button>
                 ))}
@@ -1801,28 +1925,27 @@ export function App() {
           </>
         ) : (
           <>
-            <header>
-              <h1 className="text-5xl leading-none font-bold">
-                {activeComponent?.name ?? "Components"}
-              </h1>
-              <p className="mt-5 max-w-4xl text-lg leading-relaxed text-muted-foreground">
-                {examplePage
+            <PageHero
+              title={activeComponent?.name ?? "Components"}
+              description={
+                examplePage
                   ? examplePage.description
-                  : example?.description ?? "Preview the selected xDS component."}
-              </p>
-            </header>
+                  : example?.description ?? "Preview the selected xDS component."
+              }
+            />
 
+            <div className="px-6 md:px-24">
             {examplePage ? (
           <section
             aria-label={`${activeComponent?.name} example`}
-            className="mt-10 flex h-[min(56rem,calc(100svh-6rem))] min-h-[36rem] flex-col border border-border"
+            className="mt-4 flex h-[min(56rem,calc(100svh-6rem))] min-h-[36rem] flex-col border border-border"
           >
             {examplePage.render()}
           </section>
         ) : (
               <section
                 aria-label={`${activeComponent?.name ?? "Component"} preview`}
-                className="mt-10 flex min-h-[28rem] flex-col border border-border"
+                className="mt-4 flex min-h-[28rem] flex-col border border-border"
               >
                 <div className="flex flex-1 items-center justify-center p-6 md:p-10">
                   {example ? (
@@ -1853,9 +1976,11 @@ export function App() {
                 </details>
               </section>
             )}
+            </div>
           </>
         )}
       </main>
+      </div>
     </div>
   )
 }
