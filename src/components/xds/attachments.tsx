@@ -103,7 +103,7 @@ function Attachments({ files, disabled = false, onRemove }: AttachmentsProps) {
                 disabled={disabled}
                 size="icon-xs"
                 type="button"
-                variant="tertiary"
+                variant="ghost"
                 onClick={() => onRemove(index)}
               >
                 <X aria-hidden="true" />

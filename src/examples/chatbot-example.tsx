@@ -510,7 +510,7 @@ function SettingsSheet({
 
   return (
     <Sheet>
-      <SheetTrigger render={<Button size="sm" type="button" variant="tertiary" />}>
+      <SheetTrigger render={<Button size="sm" type="button" variant="ghost" />}>
         <Settings2 aria-hidden="true" />
         Settings
       </SheetTrigger>
@@ -877,7 +877,7 @@ export function ChatbotExample() {
                           size="icon-xs"
                           title="Edit prompt"
                           type="button"
-                          variant="tertiary"
+                          variant="ghost"
                           onClick={() => editPrompt(turn)}
                         >
                           <Pencil aria-hidden="true" />
@@ -895,7 +895,7 @@ export function ChatbotExample() {
                               : "Copy prompt"
                           }
                           type="button"
-                          variant="tertiary"
+                          variant="ghost"
                           onClick={() => copyPrompt(turn)}
                         >
                           {copiedPromptId === turn.id ? (
@@ -1042,7 +1042,7 @@ export function ChatbotExample() {
                                   aria-label={copiedId === turn.id ? "Copied to clipboard" : "Copy answer"}
                                   size="icon-xs"
                                   type="button"
-                                  variant="tertiary"
+                                  variant="ghost"
                                   title={copiedId === turn.id ? "Copied to clipboard" : "Copy answer"}
                                   onClick={() => copyAnswer(turn)}
                                 >
@@ -1059,7 +1059,7 @@ export function ChatbotExample() {
                                   size="icon-xs"
                                   title="Like answer"
                                   type="button"
-                                  variant="tertiary"
+                                  variant="ghost"
                                   onClick={() =>
                                     updateTurn(turn.id, (current) => ({
                                       ...current,
@@ -1079,7 +1079,7 @@ export function ChatbotExample() {
                                   size="icon-xs"
                                   title="Dislike answer"
                                   type="button"
-                                  variant="tertiary"
+                                  variant="ghost"
                                   onClick={() => {
                                     setFeedbackText(turn.feedbackText)
                                     setFeedbackTurnId(turn.id)
@@ -1096,7 +1096,7 @@ export function ChatbotExample() {
                                     size="icon-xs"
                                     title="Regenerate answer"
                                     type="button"
-                                    variant="tertiary"
+                                    variant="ghost"
                                     onClick={regenerate}
                                   >
                                     <RotateCcw aria-hidden="true" />

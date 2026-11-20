@@ -35,7 +35,7 @@ function Suggestions({
           disabled={disabled}
           size="sm"
           type="button"
-          variant="secondary"
+          variant="outline"
           onClick={() => onSelect(item.prompt)}
         >
           {item.label}

@@ -64,6 +64,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/xds/sheet"
+import { Tabs, TabsList, TabsTrigger } from "@/components/xds/tabs"
 import {
   INITIAL_CTA_ATTACHMENT_ACCEPT,
   InitialCta,
@@ -184,27 +185,17 @@ function InitialCtaPreview({
           <span className="text-sm text-muted-foreground">
             Suggestions:
           </span>
-          <div
-            aria-label="Suggestion placement"
-            className="flex rounded-full border border-border bg-muted p-0.5"
-            role="group"
+          <Tabs
+            value={suggestionsPlacement}
+            onValueChange={(next: "above" | "below") =>
+              onSuggestionsPlacementChange(next)
+            }
           >
-            {(["above", "below"] as const).map((placement) => (
-              <Button
-                key={placement}
-                aria-pressed={placement === suggestionsPlacement}
-                className="border-0"
-                size="xs"
-                type="button"
-                variant={
-                  placement === suggestionsPlacement ? "secondary" : "tertiary"
-                }
-                onClick={() => onSuggestionsPlacementChange(placement)}
-              >
-                {placement === "above" ? "Above CTA" : "Below CTA"}
-              </Button>
-            ))}
-          </div>
+            <TabsList aria-label="Suggestion placement">
+              <TabsTrigger value="above">Above CTA</TabsTrigger>
+              <TabsTrigger value="below">Below CTA</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
         <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
           <input
@@ -364,24 +355,15 @@ function CapabilityIntroPreview() {
 
   return (
     <div className="w-full max-w-3xl space-y-6">
-      <div
-        aria-label="Starters layout"
-        className="flex gap-2"
-        role="group"
+      <Tabs
+        value={layout}
+        onValueChange={(next: CapabilityIntroStartersLayout) => setLayout(next)}
       >
-        {(["flat", "grouped"] as const).map((option) => (
-          <Button
-            key={option}
-            aria-pressed={layout === option}
-            size="sm"
-            type="button"
-            variant={layout === option ? "primary" : "outline"}
-            onClick={() => setLayout(option)}
-          >
-            {option === "flat" ? "Flat starters" : "Grouped starters"}
-          </Button>
-        ))}
-      </div>
+        <TabsList aria-label="Starters layout">
+          <TabsTrigger value="flat">Flat starters</TabsTrigger>
+          <TabsTrigger value="grouped">Grouped starters</TabsTrigger>
+        </TabsList>
+      </Tabs>
       <CapabilityIntro
         title="How can I help today?"
         description="I can help you find, write, and explain information for your work."
@@ -1000,25 +982,15 @@ function ConfirmationPromptPreview() {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div aria-label="Scenario" className="flex gap-2" role="group">
-          {(
-            [
-              { value: "send", label: "Send email" },
-              { value: "delete", label: "Delete files" },
-            ] as const
-          ).map((option) => (
-            <Button
-              key={option.value}
-              aria-pressed={scenario === option.value}
-              size="sm"
-              type="button"
-              variant={scenario === option.value ? "secondary" : "tertiary"}
-              onClick={() => restart(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+        <Tabs
+          value={scenario}
+          onValueChange={(next: ConfirmationScenario) => restart(next)}
+        >
+          <TabsList aria-label="Scenario">
+            <TabsTrigger value="send">Send email</TabsTrigger>
+            <TabsTrigger value="delete">Delete files</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <input
@@ -1251,25 +1223,15 @@ function PrivacyNoticePreview() {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <div aria-label="Placement" className="flex gap-2" role="group">
-        {(
-          [
-            { value: "composer", label: "Composer" },
-            { value: "inline", label: "Inline" },
-          ] as const
-        ).map((option) => (
-          <Button
-            key={option.value}
-            aria-pressed={variant === option.value}
-            size="sm"
-            type="button"
-            variant={variant === option.value ? "primary" : "outline"}
-            onClick={() => setVariant(option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
+      <Tabs
+        value={variant}
+        onValueChange={(next: PrivacyNoticeVariant) => setVariant(next)}
+      >
+        <TabsList aria-label="Placement">
+          <TabsTrigger value="composer">Composer</TabsTrigger>
+          <TabsTrigger value="inline">Inline</TabsTrigger>
+        </TabsList>
+      </Tabs>
       {variant === "composer" ? (
         <div className="space-y-2">
           <div>
@@ -1338,7 +1300,7 @@ function PrivacyNoticePreview() {
 const componentExamples: Record<string, ComponentExample> = {
   button: {
     description: "A control that triggers an action.",
-    code: '<Button variant="primary">Button</Button>',
+    code: '<Button variant="default">Button</Button>',
     preview: () => <Button>Button</Button>,
   },
   card: {
@@ -1913,7 +1875,7 @@ function ThemeToggle() {
 
   return (
     <Button
-      variant="tertiary"
+      variant="ghost"
       size="icon"
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       onClick={() => setTheme(isDark ? "light" : "dark")}

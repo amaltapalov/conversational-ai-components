@@ -105,7 +105,7 @@ function LimitationNotice({
                 data-slot="limitation-notice-toggle"
                 size="xs"
                 type="button"
-                variant="tertiary"
+                variant="ghost"
                 onClick={toggle}
               >
                 {detailsLabel}

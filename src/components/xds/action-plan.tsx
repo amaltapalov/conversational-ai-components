@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useId,
   useRef,
@@ -204,6 +205,7 @@ function ActionPlan({
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   const [announcement, setAnnouncement] = useState("")
   const pendingFocusId = useRef<string | null>(null)
+  const listRef = useRef<HTMLOListElement>(null)
 
   const isOpen = openProp ?? internalOpen
   const isDraft = mode === "contractual" && status === "draft"
@@ -326,6 +328,23 @@ function ActionPlan({
   function handleDragStart(event: DragEvent<HTMLLIElement>, step: ActionPlanStep) {
     event.dataTransfer.effectAllowed = "move"
     event.dataTransfer.setData("text/plain", step.id)
+
+    // Replace the browser's bare snapshot with a card-styled copy the user holds.
+    const source = event.currentTarget
+    const rect = source.getBoundingClientRect()
+    const preview = source.cloneNode(true) as HTMLElement
+    preview.classList.add("rounded-lg", "bg-card", "px-2", "shadow-lg", "ring-1", "ring-foreground/10")
+    Object.assign(preview.style, {
+      position: "fixed",
+      top: "-1000px",
+      left: "-1000px",
+      width: `${rect.width}px`,
+      pointerEvents: "none",
+    })
+    document.body.appendChild(preview)
+    event.dataTransfer.setDragImage(preview, event.clientX - rect.left, event.clientY - rect.top)
+    setTimeout(() => preview.remove())
+
     setLifted(null)
     setDragId(step.id)
   }
@@ -339,7 +358,28 @@ function ActionPlan({
     setDropIndex(after ? index + 1 : index)
   }
 
-  function handleDrop(event: DragEvent<HTMLLIElement>) {
+  // Keeps the current target while hovering the placeholder or gaps between rows.
+  function allowDrop(event: DragEvent<HTMLElement>) {
+    if (!dragId) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  // Outside the rows (e.g. below the list after it shrinks), target the nearest end.
+  function handleListDragOver(event: DragEvent<HTMLElement>) {
+    if (!dragId) return
+    allowDrop(event)
+    const target = event.target as Element
+    if (target.closest('[data-slot="action-plan-step"], [data-slot="action-plan-step-ghost"]')) {
+      return
+    }
+    const list = listRef.current?.getBoundingClientRect()
+    if (!list) return
+    if (event.clientY >= list.bottom) setDropIndex(steps.length)
+    else if (event.clientY <= list.top) setDropIndex(0)
+  }
+
+  function handleDrop(event: DragEvent<HTMLElement>) {
     event.preventDefault()
     if (dragFrom >= 0 && dropIndex !== null) {
       const to = dropIndex > dragFrom ? dropIndex - 1 : dropIndex
@@ -358,8 +398,49 @@ function ActionPlan({
     setDraggableId(null)
   }
 
-  const showDropIndicator = (index: number) =>
-    dropIndex === index && dragFrom >= 0 && index !== dragFrom && index !== dragFrom + 1
+  // True when the drop target is a different slot than the dragged step's own.
+  const isMoved =
+    dragFrom >= 0 && dropIndex !== null && dropIndex !== dragFrom && dropIndex !== dragFrom + 1
+  const ghostPosition =
+    isMoved && dropIndex !== null ? (dropIndex > dragFrom ? dropIndex - 1 : dropIndex) : -1
+  const ghostClass =
+    "-mx-2 rounded-lg border border-dashed border-accent-brand bg-accent-brand/5 px-2 opacity-60"
+
+  // Position a step would have if dropped now, so visible numbers match the preview.
+  function previewIndex(index: number) {
+    if (!isMoved) return index
+    const withoutDragged = index > dragFrom ? index - 1 : index
+    return withoutDragged >= ghostPosition ? withoutDragged + 1 : withoutDragged
+  }
+
+  function renderGhost() {
+    const step = steps[dragFrom]
+
+    return (
+      <li
+        key={`${step.id}-ghost`}
+        aria-hidden="true"
+        data-slot="action-plan-step-ghost"
+        className={cn(
+          "flex gap-3 py-2 animate-in fade-in-0 duration-150 motion-reduce:animate-none",
+          ghostClass
+        )}
+      >
+        {editable && (
+          <span className="-ml-1 flex h-5 w-4 shrink-0 items-center justify-center text-muted-foreground">
+            <GripVertical className="size-4" />
+          </span>
+        )}
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          <StepMarker index={ghostPosition} status={step.status} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <span className="font-medium">{step.title}</span>
+          {step.description && <p className="mt-0.5 text-muted-foreground">{step.description}</p>}
+        </div>
+      </li>
+    )
+  }
 
   const headerLabel = getHeaderLabel(status, steps)
   const showFooter = isDraft && (onApprove || onRegenerate || onCancel)
@@ -410,32 +491,37 @@ function ActionPlan({
         hidden={!isOpen}
         id={contentId}
         className="border-t border-border px-4 py-4 animate-in fade-in-0 duration-200 motion-reduce:animate-none"
+        onDragOver={handleListDragOver}
+        onDrop={handleDrop}
       >
-        <ol data-slot="action-plan-step-list" className="flex flex-col">
+        <ol
+          ref={listRef}
+          data-slot="action-plan-step-list"
+          className="flex flex-col"
+        >
           {steps.map((step, index) => {
             const KindIcon = step.kind ? kindIcon[step.kind] : null
             const isEditing = editing?.id === step.id
             const isLifted = lifted?.id === step.id
+            const isDragging = dragId === step.id
 
             return (
+              <Fragment key={step.id}>
+              {isMoved && dropIndex === index && renderGhost()}
               <li
-                key={step.id}
                 data-slot="action-plan-step"
                 data-status={step.status ?? "pending"}
-                data-dragging={dragId === step.id || undefined}
+                data-dragging={isDragging || undefined}
                 data-lifted={isLifted || undefined}
                 draggable={draggableId === step.id}
                 className={cn(
-                  "relative flex gap-3 border-t border-transparent py-2 data-dragging:opacity-50 data-lifted:bg-muted",
-                  showDropIndicator(index) && "border-t-accent-brand",
-                  index === steps.length - 1 &&
-                    showDropIndicator(steps.length) &&
-                    "border-b border-b-accent-brand"
+                  "relative flex gap-3 data-lifted:bg-muted",
+                  isDragging && isMoved ? "h-0 overflow-hidden opacity-0" : "py-2",
+                  isDragging && !isMoved && ghostClass
                 )}
                 onDragEnd={endDrag}
                 onDragOver={(event) => handleDragOver(event, index)}
                 onDragStart={(event) => handleDragStart(event, step)}
-                onDrop={handleDrop}
               >
                 {editable && !isEditing && (
                   <button
@@ -453,7 +539,7 @@ function ActionPlan({
                   </button>
                 )}
                 <span className="flex size-5 shrink-0 items-center justify-center">
-                  <StepMarker index={index} status={step.status} />
+                  <StepMarker index={previewIndex(index)} status={step.status} />
                 </span>
 
                 <div className="min-w-0 flex-1">
@@ -509,7 +595,7 @@ function ActionPlan({
                           <Check aria-hidden="true" />
                           Save
                         </Button>
-                        <Button size="xs" type="button" variant="tertiary" onClick={cancelEdit}>
+                        <Button size="xs" type="button" variant="ghost" onClick={cancelEdit}>
                           Cancel
                         </Button>
                       </div>
@@ -540,7 +626,7 @@ function ActionPlan({
                               id={editId(step.id)}
                               size="icon-xs"
                               type="button"
-                              variant="tertiary"
+                              variant="ghost"
                               onClick={() => startEdit(step)}
                             >
                               <Pencil aria-hidden="true" />
@@ -549,7 +635,7 @@ function ActionPlan({
                               aria-label={`Remove step ${index + 1}`}
                               size="icon-xs"
                               type="button"
-                              variant="tertiary"
+                              variant="ghost"
                               onClick={() => removeStep(index)}
                             >
                               <Trash2 aria-hidden="true" />
@@ -576,6 +662,8 @@ function ActionPlan({
                   )}
                 </div>
               </li>
+              {isMoved && index === steps.length - 1 && dropIndex === steps.length && renderGhost()}
+              </Fragment>
             )
           })}
         </ol>
@@ -591,7 +679,7 @@ function ActionPlan({
             id={addId}
             size="sm"
             type="button"
-            variant="tertiary"
+            variant="ghost"
             onClick={addStep}
           >
             <Plus aria-hidden="true" />
@@ -631,7 +719,7 @@ function ActionPlan({
               className="ml-auto"
               size="sm"
               type="button"
-              variant="tertiary"
+              variant="ghost"
               onClick={onCancel}
             >
               Cancel

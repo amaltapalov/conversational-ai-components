@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/xds/select"
 import { Textarea } from "@/components/xds/textarea"
+import { Tabs, TabsList, TabsTrigger } from "@/components/xds/tabs"
 import type { SuggestionItem } from "@/components/xds/suggestions"
 
 export type InitialCtaSuggestion = SuggestionItem
@@ -291,7 +292,7 @@ function InitialCta({
                         size="icon-xs"
                         title={`Remove ${file.name}`}
                         type="button"
-                        variant="tertiary"
+                        variant="ghost"
                         onClick={() => removeAttachment(file)}
                       >
                         <X aria-hidden="true" />
@@ -304,7 +305,7 @@ function InitialCta({
 
             <Textarea
               aria-label={title}
-              className="min-h-16 resize-none border-0 bg-transparent px-4 py-4 text-sm md:text-base focus-visible:border-transparent focus-visible:ring-0 disabled:!bg-muted disabled:!opacity-100 dark:disabled:!bg-gray-900"
+              className="min-h-16 resize-none border-0 bg-transparent px-4 py-4 text-sm shadow-none md:text-base focus-visible:border-transparent focus-visible:ring-0 disabled:!bg-muted disabled:!opacity-100 dark:disabled:!bg-gray-900"
               disabled={disabled}
               placeholder={placeholder}
               rows={2}
@@ -332,30 +333,22 @@ function InitialCta({
                 )}
 
                 {modes.length > 0 && (
-                  <div
-                    aria-label="Assistant mode"
-                    className="flex flex-wrap rounded-full border border-border bg-muted p-0.5 dark:border-gray-800 dark:bg-gray-900"
-                    role="group"
+                  <Tabs
+                    value={selectedMode}
+                    onValueChange={(next: string | null) => updateMode(next)}
                   >
-                    {modes.map((item) => {
-                      const isSelected = item.value === selectedMode
-
-                      return (
-                        <Button
+                    <TabsList aria-label="Assistant mode">
+                      {modes.map((item) => (
+                        <TabsTrigger
                           key={item.value}
-                          aria-pressed={isSelected}
-                          className="border-0 text-sm"
                           disabled={disabled}
-                          size="xs"
-                          type="button"
-                          variant={isSelected ? "secondary" : "tertiary"}
-                          onClick={() => updateMode(item.value)}
+                          value={item.value}
                         >
                           {item.label}
-                        </Button>
-                      )
-                    })}
-                  </div>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
                 )}
               </div>
 
@@ -375,7 +368,7 @@ function InitialCta({
                   size="icon-sm"
                   title="Start voice input"
                   type="button"
-                  variant="tertiary"
+                  variant="ghost"
                   onClick={onVoiceInput}
                 >
                   <Mic aria-hidden="true" />
@@ -394,7 +387,7 @@ function InitialCta({
                 size="icon-xs"
                 title="Dismiss attachment error"
                 type="button"
-                variant="tertiary"
+                variant="ghost"
                 onClick={dismissAttachmentError}
               >
                 <X aria-hidden="true" />
@@ -427,7 +420,7 @@ function InitialCta({
         <div className="overflow-hidden rounded-lg border border-input bg-background focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:border-gray-800 dark:bg-gray-900">
           <Textarea
             aria-label={title}
-            className="min-h-32 resize-y border-0 bg-transparent px-4 py-3 text-sm focus-visible:border-transparent focus-visible:ring-0 dark:!bg-gray-900"
+            className="min-h-32 resize-y border-0 bg-transparent px-4 py-3 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:!bg-gray-900"
             disabled={disabled}
             placeholder={placeholder}
             value={value}
@@ -449,7 +442,7 @@ function InitialCta({
                       {modes.find((item) => item.value === selectedMode)?.label}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent align="start">
+                  <SelectContent align="start" alignItemWithTrigger={false}>
                     {modes.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         {item.label}
@@ -469,7 +462,7 @@ function InitialCta({
                       {templates.find((item) => item.id === selectedTemplateId)?.label}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent align="start">
+                  <SelectContent align="start" alignItemWithTrigger={false}>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.label}
@@ -485,7 +478,7 @@ function InitialCta({
                   disabled={disabled}
                   size="sm"
                   type="button"
-                  variant="tertiary"
+                  variant="ghost"
                   onClick={onAttach}
                 >
                   <Paperclip aria-hidden="true" />

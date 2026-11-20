@@ -252,7 +252,7 @@ function ConfirmationPrompt({
           disabled={!isActionable}
           size="sm"
           type="button"
-          variant={isDestructive ? "destructive" : "primary"}
+          variant={isDestructive ? "destructive" : "default"}
           onClick={onConfirm}
         >
           {status === "confirming" && (
@@ -280,7 +280,7 @@ function ConfirmationPrompt({
           disabled={!isActionable}
           size="sm"
           type="button"
-          variant="tertiary"
+          variant="ghost"
           onClick={onCancel}
         >
           {cancelLabel}
