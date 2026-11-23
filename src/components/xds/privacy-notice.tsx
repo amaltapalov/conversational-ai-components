@@ -88,7 +88,7 @@ function PrivacyNotice({
       className={cn(
         "w-full text-sm text-muted-foreground",
         variant === "composer"
-          ? "border border-t-0 border-border bg-muted px-4 py-3 dark:border-gray-800 dark:bg-gray-900"
+          ? "rounded-b-lg border border-t-0 border-border bg-muted px-4 py-3 dark:border-gray-800 dark:bg-gray-900"
           : variant === "embedded"
             ? "bg-muted px-4 py-3 dark:bg-gray-900"
             : "border-l-2 border-border pl-3",

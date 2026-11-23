@@ -64,7 +64,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/xds/sheet"
-import { Tabs, TabsList, TabsTrigger } from "@/components/xds/tabs"
 import {
   INITIAL_CTA_ATTACHMENT_ACCEPT,
   InitialCta,
@@ -83,6 +82,7 @@ import {
   SelectValue,
 } from "@/components/xds/select"
 import { Textarea } from "@/components/xds/textarea"
+import { Tabs, TabsList, TabsTrigger } from "@/components/xds/tabs"
 import { LimitationNotice } from "@/components/xds/limitation-notice"
 import {
   PrivacyNotice,
@@ -127,6 +127,35 @@ type ComponentExampleCodeProps = {
 type ComponentExamplePreviewProps = ComponentExampleCodeProps & {
   onSuggestionsPlacementChange: (placement: SuggestionsPlacement) => void
   onShowSuggestionsLabelChange: (showLabel: boolean) => void
+}
+
+function PreviewTabs<T extends string>({
+  ariaLabel,
+  value,
+  options,
+  onValueChange,
+}: {
+  ariaLabel: string
+  value: T
+  options: readonly { value: T; label: string }[]
+  onValueChange: (value: T) => void
+}) {
+  return (
+    <Tabs
+      value={value}
+      onValueChange={(next: T | null) => {
+        if (next !== null) onValueChange(next)
+      }}
+    >
+      <TabsList aria-label={ariaLabel}>
+        {options.map((option) => (
+          <TabsTrigger key={option.value} value={option.value}>
+            {option.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  )
 }
 
 const starterSuggestions: SuggestionItem[] = [
@@ -185,17 +214,15 @@ function InitialCtaPreview({
           <span className="text-sm text-muted-foreground">
             Suggestions:
           </span>
-          <Tabs
+          <PreviewTabs
+            ariaLabel="Suggestion placement"
             value={suggestionsPlacement}
-            onValueChange={(next: "above" | "below") =>
-              onSuggestionsPlacementChange(next)
-            }
-          >
-            <TabsList aria-label="Suggestion placement">
-              <TabsTrigger value="above">Above CTA</TabsTrigger>
-              <TabsTrigger value="below">Below CTA</TabsTrigger>
-            </TabsList>
-          </Tabs>
+            options={[
+              { value: "above", label: "Above CTA" },
+              { value: "below", label: "Below CTA" },
+            ]}
+            onValueChange={onSuggestionsPlacementChange}
+          />
         </div>
         <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
           <input
@@ -355,15 +382,15 @@ function CapabilityIntroPreview() {
 
   return (
     <div className="w-full max-w-3xl space-y-6">
-      <Tabs
+      <PreviewTabs
+        ariaLabel="Starters layout"
         value={layout}
-        onValueChange={(next: CapabilityIntroStartersLayout) => setLayout(next)}
-      >
-        <TabsList aria-label="Starters layout">
-          <TabsTrigger value="flat">Flat starters</TabsTrigger>
-          <TabsTrigger value="grouped">Grouped starters</TabsTrigger>
-        </TabsList>
-      </Tabs>
+        options={[
+          { value: "flat", label: "Flat starters" },
+          { value: "grouped", label: "Grouped starters" },
+        ]}
+        onValueChange={setLayout}
+      />
       <CapabilityIntro
         title="How can I help today?"
         description="I can help you find, write, and explain information for your work."
@@ -637,7 +664,7 @@ function StreamOfThoughtPreview() {
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
           {prompt}
         </p>
         <StreamOfThought
@@ -715,7 +742,7 @@ function ResponseStatusPreview() {
             Restart run
           </Button>
         </div>
-        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
           What changed in our travel policy this quarter?
         </p>
         <ResponseStatus
@@ -831,7 +858,7 @@ function ActionPlanPreview() {
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
           {prompt}
         </p>
         <ActionPlan
@@ -982,15 +1009,15 @@ function ConfirmationPromptPreview() {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs
+        <PreviewTabs
+          ariaLabel="Scenario"
           value={scenario}
-          onValueChange={(next: ConfirmationScenario) => restart(next)}
-        >
-          <TabsList aria-label="Scenario">
-            <TabsTrigger value="send">Send email</TabsTrigger>
-            <TabsTrigger value="delete">Delete files</TabsTrigger>
-          </TabsList>
-        </Tabs>
+          options={[
+            { value: "send", label: "Send email" },
+            { value: "delete", label: "Delete files" },
+          ]}
+          onValueChange={(next) => restart(next)}
+        />
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
             <input
@@ -1007,7 +1034,7 @@ function ConfirmationPromptPreview() {
         </div>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
           {isSend
             ? "Email the Q3 summary to the leadership team."
             : "Delete last year's draft reports from the shared drive."}
@@ -1107,7 +1134,7 @@ function PermissionRequestPreview() {
         </Button>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+        <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
           Find a 30-minute slot next week for the AI pilot review.
         </p>
         <PermissionRequest
@@ -1219,44 +1246,51 @@ const privacyItems: PrivacyNoticeItem[] = [
 function PrivacyNoticePreview() {
   const [variant, setVariant] = useState<PrivacyNoticeVariant>("composer")
   const [prompt, setPrompt] = useState("")
+  const [mode, setMode] = useState("assistant")
   const [feedback, setFeedback] = useState("")
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <Tabs
+      <PreviewTabs
+        ariaLabel="Placement"
         value={variant}
-        onValueChange={(next: PrivacyNoticeVariant) => setVariant(next)}
-      >
-        <TabsList aria-label="Placement">
-          <TabsTrigger value="composer">Composer</TabsTrigger>
-          <TabsTrigger value="inline">Inline</TabsTrigger>
-        </TabsList>
-      </Tabs>
+        options={[
+          { value: "composer", label: "Composer" },
+          { value: "inline", label: "Inline" },
+        ]}
+        onValueChange={setVariant}
+      />
       {variant === "composer" ? (
         <div className="space-y-2">
-          <div>
-            <InitialCta
-              variant="chat"
-              title="Ask a question"
-              placeholder="Ask a question..."
-              disclaimer=""
-              submitLabel="Send"
-              value={prompt}
-              onValueChange={setPrompt}
-              onSubmit={({ prompt: submitted }) => {
-                setFeedback(`Ready to send: "${submitted}"`)
-                setPrompt("")
-              }}
-              footer={
-                <PrivacyNotice
-                  variant="embedded"
-                  items={privacyItems}
-                  policyHref="#privacy-policy"
-                  title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
-                />
-              }
-            />
-          </div>
+          <InitialCta
+            variant="chat"
+            title="Ask a question"
+            placeholder="Ask a question..."
+            modes={[
+              { value: "assistant", label: "Assistant" },
+              { value: "novartis-chat", label: "Novartis Chat" },
+            ]}
+            mode={mode}
+            onModeChange={setMode}
+            onAttach={() => setFeedback("Attachments are not connected in this demo.")}
+            onVoiceInput={() => setFeedback("Voice input is ready.")}
+            disclaimer=""
+            submitLabel="Send"
+            value={prompt}
+            onValueChange={setPrompt}
+            onSubmit={({ prompt: submitted }) => {
+              setFeedback(`Ready to send: "${submitted}"`)
+              setPrompt("")
+            }}
+            footer={
+              <PrivacyNotice
+                variant="embedded"
+                items={privacyItems}
+                policyHref="#privacy-policy"
+                title="AI can make mistakes. Chats are kept for 30 days and aren't used to train models."
+              />
+            }
+          />
           {feedback && (
             <p className="text-sm text-muted-foreground" role="status">
               {feedback}
@@ -1265,7 +1299,7 @@ function PrivacyNoticePreview() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <p className="max-w-[80%] self-end rounded-lg bg-muted px-4 py-2 text-sm">
+          <p className="max-w-[80%] self-end bg-muted px-4 py-2 text-sm">
             What's the latest news on EU AI Act enforcement?
           </p>
           <PrivacyNotice
@@ -1632,7 +1666,7 @@ const showLabel = true
   { topic: "sharing", description: "Data stays within the company tenant." },
 ]
 
-{/* Composer: the notice sits inside the input block via the footer slot */}
+{/* Composer: replaces the InitialCta disclaimer, rendered inside the input box */}
 <InitialCta
   variant="chat"
   disclaimer=""
@@ -1802,11 +1836,16 @@ const overviewBenefits: {
 function BenefitIllustration({ kind }: { kind: BenefitKind }) {
   if (kind === "delivery") {
     return (
-      <div className="w-full max-w-[15rem] rounded-xl bg-white p-4 font-mono text-[13px] text-foreground shadow-sm">
+      <div className="w-full max-w-[15rem] rounded-xl bg-neutral-900 p-4 font-mono text-[13px] text-neutral-100 shadow-sm">
+        <div className="mb-4 flex gap-1.5">
+          <span className="size-2 rounded-full bg-neutral-600" />
+          <span className="size-2 rounded-full bg-neutral-600" />
+          <span className="size-2 rounded-full bg-neutral-600" />
+        </div>
         <p>
           <span className="text-accent-brand">$</span> add @xds/chat
         </p>
-        <p className="mt-2 text-muted-foreground">✓ Added chat</p>
+        <p className="mt-2 text-neutral-400">✓ Added chat</p>
       </div>
     )
   }
@@ -1945,7 +1984,7 @@ function PageHero({
 }) {
   return (
     <header className="docs-hero px-6 pt-16 pb-12 md:px-24 md:pt-20">
-      <h1 className="text-5xl leading-none font-bold tracking-normal md:text-6xl">
+      <h1 className="text-5xl leading-none font-bold tracking-tight md:text-6xl">
         {title}
       </h1>
       <p className="mt-12 max-w-[56rem] text-xl leading-[1.9] tracking-[-0.01em]">
@@ -2039,7 +2078,7 @@ export function App() {
         {isIntroduction ? (
           <>
             <header className="docs-hero px-6 pt-16 pb-4 md:px-12 md:pt-20 xl:px-24">
-              <h1 className="text-3xl leading-[0.95] font-bold tracking-normal whitespace-nowrap sm:text-4xl lg:text-5xl 2xl:text-7xl">
+              <h1 className="max-w-[56rem] text-5xl leading-[0.95] font-bold tracking-tight md:text-7xl">
                 Conversational AI design library
               </h1>
               <p className="mt-8 max-w-[48rem] text-xl tracking-[-0.02em] text-muted-foreground">
@@ -2054,12 +2093,12 @@ export function App() {
                   >
                     <div
                       aria-hidden="true"
-                      className="flex h-36 items-center justify-center rounded-xl bg-muted p-4"
+                      className="flex h-48 items-center justify-center rounded-xl bg-muted p-6"
                     >
                       <BenefitIllustration kind={benefit.id} />
                     </div>
                     <div className="px-3 pt-5 pb-3">
-                      <h2 className="text-xl leading-tight font-bold tracking-normal">
+                      <h2 className="text-xl font-bold tracking-tight">
                         {benefit.title}
                       </h2>
                       <p className="mt-1.5 text-base text-muted-foreground">
@@ -2076,7 +2115,7 @@ export function App() {
             >
               <h2
                 id="explore-heading"
-                className="flex items-center gap-3 text-4xl leading-tight font-bold tracking-normal"
+                className="flex items-center gap-3 text-4xl leading-tight font-bold tracking-tight"
               >
                 From prompt
                 <ChevronRight

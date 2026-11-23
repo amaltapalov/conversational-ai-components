@@ -399,7 +399,11 @@ function InitialCta({
               {disclaimer}
             </p>
           )}
-          {footer && <div className="border-t border-border">{footer}</div>}
+          {footer && (
+            <div className="border-t border-border dark:border-gray-800">
+              {footer}
+            </div>
+          )}
         </div>
       </form>
     )
